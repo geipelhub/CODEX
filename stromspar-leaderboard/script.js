@@ -1,5 +1,6 @@
-const ANNUAL_CONSUMPTION_KWH = 3500;
+const DEFAULT_ANNUAL_CONSUMPTION_KWH = 3500;
 const STORAGE_KEY = "stromspar-leaderboard";
+const SETTINGS_STORAGE_KEY = "stromspar-leaderboard-settings";
 const ADMIN_PASSWORD_STORAGE_KEY = "leaderboard-admin-password";
 const H0_DAILY_LOAD_PROFILE_WEIGHTS = [
   36, 30, 27, 25, 24, 27, 34, 42, 39, 35, 33, 33,
@@ -14,19 +15,53 @@ const entryCount = document.getElementById("entry-count");
 const resetBoardButton = document.getElementById("reset-board");
 const formMessage = document.getElementById("form-message");
 const syncModeBadge = document.getElementById("sync-mode-badge");
+const consumptionSummary = document.getElementById("consumption-summary");
+const annualConsumptionInput = document.getElementById("annual-consumption");
+const entryConsumptionInput = document.getElementById("entry-consumption");
+const sortModeSummary = document.getElementById("sort-mode-summary");
+const sortModeButtons = Array.from(document.querySelectorAll("[data-sort-mode]"));
 const adminStatus = document.getElementById("admin-status");
 const adminPasswordInput = document.getElementById("admin-password");
 const adminLoginButton = document.getElementById("admin-login-button");
 const adminLogoutButton = document.getElementById("admin-logout-button");
 const adminClearButton = document.getElementById("admin-clear-button");
 const actionsHead = document.getElementById("actions-head");
+const adminToggleButton = document.getElementById("admin-toggle");
+const adminPanel = document.getElementById("admin");
 
 const supabaseClient = createSupabaseClient();
+
 let entries = [];
 let isAdmin = false;
 let adminPassword = sessionStorage.getItem(ADMIN_PASSWORD_STORAGE_KEY) || "";
+let uiSettings = loadUiSettings();
 
 initializeApp();
+
+adminToggleButton.addEventListener("click", () => {
+  const isHidden = adminPanel.classList.toggle("is-hidden");
+  adminToggleButton.setAttribute("aria-expanded", String(!isHidden));
+});
+
+annualConsumptionInput.addEventListener("input", () => {
+  const fallbackConsumption = parsePositiveInteger(
+    annualConsumptionInput.value,
+    DEFAULT_ANNUAL_CONSUMPTION_KWH
+  );
+  uiSettings.defaultConsumption = fallbackConsumption;
+  entryConsumptionInput.value = String(fallbackConsumption);
+  updateUiState();
+  persistUiSettings();
+});
+
+sortModeButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    uiSettings.sortMode = button.dataset.sortMode === "percent" ? "percent" : "absolute";
+    updateUiState();
+    renderEntries();
+    persistUiSettings();
+  });
+});
 
 document.getElementById("old-tariff-type").addEventListener("change", () => {
   updateTariffInputs("old");
@@ -43,6 +78,7 @@ form.addEventListener("submit", async (event) => {
     const formData = new FormData(form);
     const entry = createEntry({
       name: formData.get("name"),
+      annualConsumption: formData.get("annualConsumption"),
       oldTariffName: formData.get("oldTariffName"),
       oldTariffType: formData.get("oldTariffType"),
       oldWorkPrice: formData.get("oldWorkPrice"),
@@ -63,13 +99,13 @@ form.addEventListener("submit", async (event) => {
       showMessage("Eintrag gespeichert und mit dem gemeinsamen Leaderboard synchronisiert.", "success");
     } else {
       entries.push(entry);
-      sortEntries();
       persistEntries();
       renderEntries();
       showMessage("Eintrag lokal gespeichert.", "success");
     }
 
     form.reset();
+    entryConsumptionInput.value = String(uiSettings.defaultConsumption);
     updateTariffInputs("old");
     updateTariffInputs("new");
     document.getElementById("name").focus();
@@ -79,7 +115,7 @@ form.addEventListener("submit", async (event) => {
 });
 
 resetBoardButton.addEventListener("click", () => {
-  const confirmed = window.confirm("Willst du das Leaderboard wirklich leeren?");
+  const confirmed = window.confirm("Willst du das lokale Leaderboard wirklich leeren?");
 
   if (!confirmed) {
     return;
@@ -153,7 +189,23 @@ adminClearButton.addEventListener("click", async () => {
   }
 });
 
+function initializeApp() {
+  annualConsumptionInput.value = String(uiSettings.defaultConsumption);
+  entryConsumptionInput.value = String(uiSettings.defaultConsumption);
+  updateUiState();
+  updateTariffInputs("old");
+  updateTariffInputs("new");
+  initializeAdminSession();
+  refreshEntries().then(() => {
+    if (supabaseClient) {
+      subscribeToRealtimeUpdates();
+    }
+  });
+}
+
 function createEntry(data) {
+  const annualConsumptionKwh = parsePositiveInteger(data.annualConsumption, uiSettings.defaultConsumption);
+
   const oldTariffType = parseTariffType(data.oldTariffType);
   const oldTariffMetrics = resolveTariffMetrics({
     tariffType: oldTariffType,
@@ -173,13 +225,16 @@ function createEntry(data) {
   const newBasePriceEuro = parseNumericValue(data.newBasePrice);
 
   const oldAnnualCost =
-    (ANNUAL_CONSUMPTION_KWH * oldTariffMetrics.effectiveWorkPriceCents) / 100 + oldBasePriceEuro;
+    (annualConsumptionKwh * oldTariffMetrics.effectiveWorkPriceCents) / 100 + oldBasePriceEuro;
   const newAnnualCost =
-    (ANNUAL_CONSUMPTION_KWH * newTariffMetrics.effectiveWorkPriceCents) / 100 + newBasePriceEuro;
+    (annualConsumptionKwh * newTariffMetrics.effectiveWorkPriceCents) / 100 + newBasePriceEuro;
+  const annualSavings = oldAnnualCost - newAnnualCost;
+  const savingsPercent = oldAnnualCost > 0 ? (annualSavings / oldAnnualCost) * 100 : 0;
 
   return {
     id: crypto.randomUUID(),
     name: String(data.name).trim(),
+    annualConsumptionKwh,
     oldTariffName: String(data.oldTariffName).trim(),
     oldTariffType,
     oldMarketPriceCents: oldTariffMetrics.marketPriceCents,
@@ -202,7 +257,8 @@ function createEntry(data) {
     newBasePriceEuro,
     oldAnnualCost,
     newAnnualCost,
-    annualSavings: oldAnnualCost - newAnnualCost,
+    annualSavings,
+    savingsPercent,
     createdAt: new Date().toISOString(),
   };
 }
@@ -211,8 +267,24 @@ function parseTariffType(rawValue) {
   return rawValue === "dynamic" ? "dynamic" : "fixed";
 }
 
+function parsePositiveInteger(rawValue, fallback) {
+  const normalized = String(rawValue ?? "").replace(",", ".").trim();
+
+  if (!normalized) {
+    return fallback;
+  }
+
+  const parsedValue = Number.parseFloat(normalized);
+
+  if (!Number.isFinite(parsedValue) || parsedValue <= 0) {
+    throw new Error("Bitte einen gueltigen Jahresverbrauch eingeben.");
+  }
+
+  return Math.round(parsedValue);
+}
+
 function parseNumericValue(rawValue, { allowNegative = false } = {}) {
-  const normalized = String(rawValue).replace(",", ".").trim();
+  const normalized = String(rawValue ?? "").replace(",", ".").trim();
   const parsedValue = Number.parseFloat(normalized);
 
   if (Number.isNaN(parsedValue)) {
@@ -313,15 +385,16 @@ function createSupabaseClient() {
   }
 
   syncModeBadge.textContent = "Gemeinsames Live-Leaderboard";
-  return window.supabase.createClient(
-    appConfig.supabaseUrl,
-    appConfig.supabaseAnonKey
-  );
+  return window.supabase.createClient(appConfig.supabaseUrl, appConfig.supabaseAnonKey);
 }
 
-function sortEntries() {
-  entries.sort((left, right) => {
-    if (right.annualSavings !== left.annualSavings) {
+function getSortedEntries() {
+  return [...entries].sort((left, right) => {
+    if (uiSettings.sortMode === "percent") {
+      if (right.savingsPercent !== left.savingsPercent) {
+        return right.savingsPercent - left.savingsPercent;
+      }
+    } else if (right.annualSavings !== left.annualSavings) {
       return right.annualSavings - left.annualSavings;
     }
 
@@ -342,21 +415,38 @@ function loadEntries() {
 
   try {
     const parsedEntries = JSON.parse(rawEntries);
-    return Array.isArray(parsedEntries) ? parsedEntries : [];
+    return Array.isArray(parsedEntries) ? parsedEntries.map(normalizeEntry) : [];
   } catch {
     return [];
   }
 }
 
-async function initializeApp() {
-  updateTariffInputs("old");
-  updateTariffInputs("new");
-  initializeAdminSession();
-  await refreshEntries();
+function loadUiSettings() {
+  try {
+    const rawSettings = localStorage.getItem(SETTINGS_STORAGE_KEY);
+    const parsedSettings = rawSettings ? JSON.parse(rawSettings) : {};
 
-  if (supabaseClient) {
-    subscribeToRealtimeUpdates();
+    return {
+      defaultConsumption: parseStoredConsumption(parsedSettings.defaultConsumption),
+      sortMode: parsedSettings.sortMode === "percent" ? "percent" : "absolute",
+    };
+  } catch {
+    return {
+      defaultConsumption: DEFAULT_ANNUAL_CONSUMPTION_KWH,
+      sortMode: "absolute",
+    };
   }
+}
+
+function persistUiSettings() {
+  localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(uiSettings));
+}
+
+function parseStoredConsumption(value) {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) && numericValue > 0
+    ? Math.round(numericValue)
+    : DEFAULT_ANNUAL_CONSUMPTION_KWH;
 }
 
 function initializeAdminSession() {
@@ -383,7 +473,7 @@ async function loadEntriesFromSupabase() {
 
   if (error) {
     showMessage(
-      "Supabase konnte nicht gelesen werden. Die App bleibt verfuegbar, aber pruefe URL, Key und Tabellenstruktur.",
+      "Supabase konnte nicht gelesen werden. Bitte URL, Key und Tabellenstruktur pruefen.",
       "error"
     );
     return [];
@@ -396,6 +486,7 @@ async function saveEntryToSupabase(entry) {
   const payload = {
     id: entry.id,
     name: entry.name,
+    annual_consumption_kwh: entry.annualConsumptionKwh,
     old_tariff_name: entry.oldTariffName,
     old_tariff_type: entry.oldTariffType,
     old_work_price_cents: entry.oldWorkPriceCents,
@@ -417,16 +508,15 @@ async function saveEntryToSupabase(entry) {
     old_annual_cost: entry.oldAnnualCost,
     new_annual_cost: entry.newAnnualCost,
     annual_savings: entry.annualSavings,
+    savings_percent: entry.savingsPercent,
     estimated: entry.oldEstimated || entry.newEstimated,
     created_at: entry.createdAt,
   };
 
-  const { error } = await supabaseClient
-    .from("leaderboard_entries")
-    .insert(payload);
+  const { error } = await supabaseClient.from("leaderboard_entries").insert(payload);
 
   if (error) {
-    throw new Error("Speichern im gemeinsamen Leaderboard fehlgeschlagen. Bitte Supabase-Setup pruefen.");
+    throw new Error("Speichern im gemeinsamen Leaderboard fehlgeschlagen. Bitte SQL-Setup erneut ausfuehren.");
   }
 }
 
@@ -464,10 +554,30 @@ function subscribeToRealtimeUpdates() {
     .subscribe();
 }
 
-function mapSupabaseRowToEntry(row) {
+function normalizeEntry(entry) {
+  const annualConsumptionKwh = Number(entry.annualConsumptionKwh || DEFAULT_ANNUAL_CONSUMPTION_KWH);
+  const oldAnnualCost = Number(entry.oldAnnualCost);
+  const annualSavings = Number(entry.annualSavings);
+  const derivedPercent =
+    oldAnnualCost > 0 ? (annualSavings / oldAnnualCost) * 100 : 0;
+
   return {
+    ...entry,
+    annualConsumptionKwh,
+    oldAnnualCost,
+    newAnnualCost: Number(entry.newAnnualCost),
+    annualSavings,
+    savingsPercent: Number.isFinite(Number(entry.savingsPercent))
+      ? Number(entry.savingsPercent)
+      : derivedPercent,
+  };
+}
+
+function mapSupabaseRowToEntry(row) {
+  return normalizeEntry({
     id: row.id,
     name: row.name,
+    annualConsumptionKwh: row.annual_consumption_kwh,
     oldTariffName: row.old_tariff_name,
     oldTariffType: row.old_tariff_type || "fixed",
     oldWorkPriceCents: Number(row.old_work_price_cents),
@@ -491,27 +601,30 @@ function mapSupabaseRowToEntry(row) {
     oldAnnualCost: Number(row.old_annual_cost),
     newAnnualCost: Number(row.new_annual_cost),
     annualSavings: Number(row.annual_savings),
+    savingsPercent: row.savings_percent === null ? null : Number(row.savings_percent),
     estimated: Boolean(row.estimated),
     createdAt: row.created_at,
-  };
+  });
 }
 
 function renderEntries() {
-  sortEntries();
+  const sortedEntries = getSortedEntries();
   leaderboardBody.innerHTML = "";
 
-  emptyState.hidden = entries.length > 0;
-  entryCount.textContent = `${entries.length} Eintraege`;
+  emptyState.hidden = sortedEntries.length > 0;
+  entryCount.textContent = `${sortedEntries.length} Eintraege`;
 
-  entries.forEach((entry, index) => {
+  sortedEntries.forEach((entry, index) => {
     const rowFragment = rowTemplate.content.cloneNode(true);
     const row = rowFragment.querySelector("tr");
 
     row.querySelector(".rank-cell").textContent = `#${index + 1}`;
     row.querySelector(".name-cell").textContent = entry.name;
+    row.querySelector(".consumption-cell").textContent = formatConsumption(entry.annualConsumptionKwh);
     row.querySelector(".old-total-cell").textContent = formatEuro(entry.oldAnnualCost);
     row.querySelector(".new-total-cell").textContent = formatEuro(entry.newAnnualCost);
     row.querySelector(".savings-cell").textContent = formatEuro(entry.annualSavings);
+    row.querySelector(".savings-percent-cell").textContent = formatPercent(entry.savingsPercent);
 
     fillTariffCell(row.querySelector(".old-cell"), {
       tariffName: entry.oldTariffName,
@@ -568,9 +681,7 @@ function fillTariffCell(cell, tariff) {
 
   if (tariff.tariffType === "dynamic") {
     const sourceLabel =
-      tariff.priceSource === "slp_hourly"
-        ? "24h SLP-gewichtet"
-        : "Durchschnitt als Fallback";
+      tariff.priceSource === "slp_hourly" ? "24h SLP-gewichtet" : "Durchschnitt als Fallback";
 
     const averageLine =
       tariff.averageMarketPriceCents !== null
@@ -594,34 +705,14 @@ function fillTariffCell(cell, tariff) {
   `;
 }
 
-function formatEuro(value) {
-  return new Intl.NumberFormat("de-DE", {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: 2,
-  }).format(value);
-}
+function updateUiState() {
+  consumptionSummary.textContent = `${formatInteger(uiSettings.defaultConsumption)} kWh/Jahr`;
+  sortModeSummary.textContent =
+    uiSettings.sortMode === "percent" ? "Reihung nach % Ersparnis" : "Reihung nach EUR/Jahr";
 
-function formatNumber(value) {
-  return new Intl.NumberFormat("de-DE", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
-function showMessage(message, type) {
-  formMessage.hidden = false;
-  formMessage.textContent = message;
-  formMessage.className = `form-message is-${type}`;
+  sortModeButtons.forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.sortMode === uiSettings.sortMode);
+  });
 }
 
 function updateTariffInputs(prefix) {
@@ -634,9 +725,10 @@ function updateTariffInputs(prefix) {
   const workPriceInput = document.getElementById(`${prefix}-work-price`);
 
   if (tariffType === "dynamic") {
-    label.textContent = prefix === "old"
-      ? "Alter durchschnittlicher Boersenpreis (Fallback, ct/kWh)"
-      : "Neuer durchschnittlicher Boersenpreis (Fallback, ct/kWh)";
+    label.textContent =
+      prefix === "old"
+        ? "Alter durchschnittlicher Boersenpreis (Fallback, ct/kWh)"
+        : "Neuer durchschnittlicher Boersenpreis (Fallback, ct/kWh)";
     workPriceInput.placeholder = "8.50";
     markupInput.required = true;
     extraFields.classList.remove("hidden");
@@ -645,9 +737,8 @@ function updateTariffInputs(prefix) {
     return;
   }
 
-  label.textContent = prefix === "old"
-    ? "Alter Arbeitspreis (ct/kWh)"
-    : "Neuer Arbeitspreis (ct/kWh)";
+  label.textContent =
+    prefix === "old" ? "Alter Arbeitspreis (ct/kWh)" : "Neuer Arbeitspreis (ct/kWh)";
   workPriceInput.placeholder = prefix === "old" ? "40.50" : "31.20";
   markupInput.required = false;
   markupInput.value = "";
@@ -684,4 +775,48 @@ function updateAdminUi() {
   adminLogoutButton.hidden = true;
   adminClearButton.hidden = true;
   actionsHead.hidden = true;
+}
+
+function formatEuro(value) {
+  return new Intl.NumberFormat("de-DE", {
+    style: "currency",
+    currency: "EUR",
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+function formatNumber(value) {
+  return new Intl.NumberFormat("de-DE", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+function formatInteger(value) {
+  return new Intl.NumberFormat("de-DE", {
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function formatConsumption(value) {
+  return `${formatInteger(value)} kWh`;
+}
+
+function formatPercent(value) {
+  return `${formatNumber(value)} %`;
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function showMessage(message, type) {
+  formMessage.hidden = false;
+  formMessage.textContent = message;
+  formMessage.className = `form-message is-${type}`;
 }

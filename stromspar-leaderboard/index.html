@@ -3,11 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Wechselcafe Leaderboard</title>
+    <title>Stromtarif-Wechselcafe</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Source+Serif+4:wght@600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
@@ -15,41 +15,86 @@
   <body>
     <header class="site-header">
       <div class="site-header-top">
-        <div class="site-brand">
-          <span class="site-brand-kicker">Bundesministerium fuer Wirtschaft, Energie und Tourismus</span>
-          <strong>BMWET Wechselcafe</strong>
+        <div class="site-brand" aria-label="Bundesministerium fuer Wirtschaft, Energie und Tourismus">
+          <span class="site-brand-mark" aria-hidden="true"></span>
+          <div class="site-brand-text">
+            <span>Bundesministerium</span>
+            <span>Wirtschaft, Energie</span>
+            <span>und Tourismus</span>
+          </div>
         </div>
-        <nav class="site-meta-nav" aria-label="Meta Navigation">
-          <a href="#form">Eintrag</a>
-          <a href="#leaderboard">Leaderboard</a>
-          <a href="#admin">Admin</a>
-        </nav>
+        <div class="site-meta-nav" aria-hidden="true">
+          <span>Services</span>
+          <span>Themen</span>
+          <span>Ministerium</span>
+          <span>Presse</span>
+        </div>
       </div>
     </header>
 
     <main class="page-shell">
       <section class="hero">
-        <p class="eyebrow">Service</p>
-        <h1>Tarif wechseln, Kosten sparen</h1>
-        <p class="hero-copy">
-          Diese Anwendung unterstuetzt das Wechselcafe beim Vergleich von alten
-          und neuen Stromtarifen. Die Jahreskosten werden auf Basis von
-          <strong>3500 kWh pro Jahr</strong> berechnet und im Leaderboard
-          vergleichbar dargestellt.
-        </p>
-        <div class="hero-stats">
-          <article class="stat-card">
-            <span class="stat-label">Berechnungsbasis</span>
-            <strong>3500 kWh / Jahr</strong>
-          </article>
-          <article class="stat-card">
-            <span class="stat-label">Ziel</span>
-            <strong>Groesste Ersparnis</strong>
-          </article>
-          <article class="stat-card">
-            <span class="stat-label">Modus</span>
-            <strong id="sync-mode-badge">Lokaler Browser-Modus</strong>
-          </article>
+        <div class="hero-stage">
+          <div class="hero-main">
+            <div class="hero-pattern" aria-hidden="true"></div>
+            <div class="hero-badge">
+              <span class="site-brand-mark hero-mark" aria-hidden="true"></span>
+              <span>Bundesministerium fuer Wirtschaft, Energie und Tourismus</span>
+            </div>
+            <div class="hero-copy-block">
+              <p class="eyebrow">Service</p>
+              <h1>Stromtarif-Wechselcafe</h1>
+              <p class="hero-copy">
+                Vergleich von Alt- und Neutarifen fuer das gemeinsame Wechselcafe mit
+                nachvollziehbarer Jahreskostenrechnung.
+              </p>
+            </div>
+          </div>
+
+          <aside class="hero-side" aria-label="Steuerung">
+            <p class="hero-side-copy">
+              Leaderboard fuer absolute und prozentuale Einsparung mit gemeinsamer
+              Datenerfassung.
+            </p>
+
+            <div class="hero-controls">
+              <section class="hero-card" aria-labelledby="consumption-label">
+                <div class="hero-card-head">
+                  <span class="hero-card-label" id="consumption-label">Berechnungsbasis</span>
+                  <strong id="consumption-summary">3500 kWh/Jahr</strong>
+                </div>
+                <label class="hero-field">
+                  <span>Jahresverbrauch</span>
+                  <input
+                    id="annual-consumption"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value="3500"
+                    inputmode="numeric"
+                  />
+                </label>
+              </section>
+
+              <section class="hero-card" aria-labelledby="mode-label">
+                <div class="hero-card-head">
+                  <span class="hero-card-label" id="mode-label">Modus</span>
+                  <strong id="sort-mode-summary">Reihung nach EUR/Jahr</strong>
+                </div>
+                <div class="mode-toggle" role="group" aria-label="Sortierung">
+                  <button type="button" class="mode-button is-active" data-sort-mode="absolute">
+                    Nach EUR
+                  </button>
+                  <button type="button" class="mode-button" data-sort-mode="percent">
+                    Nach %
+                  </button>
+                </div>
+                <p class="hero-meta-line">
+                  Synchronisation: <strong id="sync-mode-badge">Lokaler Browser-Modus</strong>
+                </p>
+              </section>
+            </div>
+          </aside>
         </div>
       </section>
 
@@ -63,15 +108,28 @@
           <div id="form-message" class="form-message" hidden></div>
 
           <div class="info-callout">
-            Feste Tarife werden direkt mit dem Arbeitspreis berechnet.
-            Dynamische Tarife werden als <strong>Schaetzung</strong> mit
-            H0-inspiriertem Haushaltsprofil und 24h-Boersenpreisen gewichtet.
+            Feste Tarife werden direkt mit dem Arbeitspreis berechnet. Dynamische Tarife
+            werden mit H0-inspiriertem Tagesprofil und optionalen 24h-Boersenpreisen
+            naeherungsweise gewichtet.
           </div>
 
           <form id="savings-form" class="savings-form">
             <label>
               <span>Name</span>
               <input id="name" name="name" type="text" placeholder="z. B. Jasper" required />
+            </label>
+
+            <label>
+              <span>Jahresverbrauch (kWh)</span>
+              <input
+                id="entry-consumption"
+                name="annualConsumption"
+                type="number"
+                min="1"
+                step="1"
+                placeholder="z. B. 3500"
+                required
+              />
             </label>
 
             <label>
@@ -135,7 +193,7 @@
               </label>
               <label class="hint-card">
                 <span>Hinweis</span>
-                <p>Wenn 24 Stundenpreise hinterlegt sind, wird der Preis lastgewichtet statt nur gemittelt.</p>
+                <p>Mit 24 Stundenpreisen wird der Marktpreis lastgewichtet statt nur gemittelt.</p>
               </label>
             </div>
 
@@ -155,7 +213,7 @@
                 id="new-tariff-name"
                 name="newTariffName"
                 type="text"
-                placeholder="z. B. Oekostrom Fix"
+                placeholder="z. B. Oekostrom Relax"
                 required
               />
             </label>
@@ -210,7 +268,7 @@
               </label>
               <label class="hint-card">
                 <span>Hinweis</span>
-                <p>Mit 24 Stundenpreisen wird die Sch‰tzung realistischer als mit einem bloﬂen Durchschnitt.</p>
+                <p>Wenn keine Stundenpreise vorliegen, wird der Durchschnitt als Fallback genutzt.</p>
               </label>
             </div>
 
@@ -227,7 +285,7 @@
             <div class="form-actions">
               <button type="submit">Zum Leaderboard hinzufuegen</button>
               <button type="button" id="reset-board" class="ghost-button">
-                Leaderboard leeren
+                Lokales Board leeren
               </button>
             </div>
           </form>
@@ -239,17 +297,15 @@
               <p class="panel-kicker">Ergebnis</p>
               <h2>Leaderboard Jahresersparnis</h2>
             </div>
-            <div class="leaderboard-summary">
-              <span id="entry-count">0 Eintraege</span>
-            </div>
+            <div class="leaderboard-summary" id="entry-count">0 Eintraege</div>
           </div>
 
-          <section class="admin-box" id="admin">
+          <section class="admin-box is-hidden" id="admin">
             <div>
               <p class="panel-kicker">Admin</p>
               <strong id="admin-status">Nicht angemeldet</strong>
               <p class="admin-copy">
-                Nur Admins koennen Eintraege oder das gesamte Leaderboard loeschen.
+                Nur im Admin-Modus koennen Eintraege oder das gesamte Leaderboard geloescht werden.
               </p>
             </div>
             <div class="admin-actions">
@@ -280,11 +336,13 @@
                 <tr>
                   <th>Platz</th>
                   <th>Name</th>
+                  <th>Verbrauch</th>
                   <th>Alt</th>
                   <th>Neu</th>
                   <th>Alt pro Jahr</th>
                   <th>Neu pro Jahr</th>
                   <th>Ersparnis</th>
+                  <th>Ersparnis %</th>
                   <th id="actions-head" hidden>Aktionen</th>
                 </tr>
               </thead>
@@ -298,19 +356,30 @@
       </section>
     </main>
 
+    <button
+      id="admin-toggle"
+      class="admin-toggle"
+      type="button"
+      aria-controls="admin"
+      aria-expanded="false"
+      title="Admin-Bereich"
+    >
+      Intern
+    </button>
+
     <template id="row-template">
       <tr>
         <td class="rank-cell"></td>
         <td class="name-cell"></td>
+        <td class="consumption-cell"></td>
         <td class="tariff-cell old-cell"></td>
         <td class="tariff-cell new-cell"></td>
         <td class="old-total-cell"></td>
         <td class="new-total-cell"></td>
         <td class="savings-cell"></td>
+        <td class="savings-percent-cell"></td>
         <td class="actions-cell" hidden>
-          <button type="button" class="table-action-button delete-entry-button">
-            Loeschen
-          </button>
+          <button type="button" class="table-action-button delete-entry-button">Loeschen</button>
         </td>
       </tr>
     </template>
