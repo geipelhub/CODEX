@@ -1,0 +1,3 @@
+# CODEX
+
+Initial project setup.
