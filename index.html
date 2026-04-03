@@ -7,20 +7,35 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=DM+Serif+Display:ital@0;1&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Source+Serif+4:wght@600;700&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <header class="site-header">
+      <div class="site-header-top">
+        <div class="site-brand">
+          <span class="site-brand-kicker">Bundesministerium fuer Wirtschaft, Energie und Tourismus</span>
+          <strong>BMWET Wechselcafe</strong>
+        </div>
+        <nav class="site-meta-nav" aria-label="Meta Navigation">
+          <a href="#form">Eintrag</a>
+          <a href="#leaderboard">Leaderboard</a>
+          <a href="#admin">Admin</a>
+        </nav>
+      </div>
+    </header>
+
     <main class="page-shell">
       <section class="hero">
-        <p class="eyebrow">Lunch & Learn</p>
-        <h1>Stromtarif-Wechselcafe</h1>
+        <p class="eyebrow">Service</p>
+        <h1>Tarif wechseln, Kosten sparen</h1>
         <p class="hero-copy">
-          Vergleicht euren alten und neuen Tarif, berechnet die Ersparnis auf
-          Basis von <strong>3500 kWh pro Jahr</strong> und landet direkt im
-          Leaderboard.
+          Diese Anwendung unterstuetzt das Wechselcafe beim Vergleich von alten
+          und neuen Stromtarifen. Die Jahreskosten werden auf Basis von
+          <strong>3500 kWh pro Jahr</strong> berechnet und im Leaderboard
+          vergleichbar dargestellt.
         </p>
         <div class="hero-stats">
           <article class="stat-card">
@@ -39,10 +54,10 @@
       </section>
 
       <section class="workspace">
-        <section class="panel form-panel">
+        <section class="panel form-panel" id="form">
           <div class="panel-header">
             <p class="panel-kicker">Neuer Eintrag</p>
-            <h2>Tarife vergleichen</h2>
+            <h2>Tarifvergleich erfassen</h2>
           </div>
 
           <div id="form-message" class="form-message" hidden></div>
@@ -198,18 +213,18 @@
           </form>
         </section>
 
-        <section class="panel leaderboard-panel">
+        <section class="panel leaderboard-panel" id="leaderboard">
           <div class="panel-header leaderboard-header">
             <div>
-              <p class="panel-kicker">Live Ranking</p>
-              <h2>Groesste Jahresersparnis</h2>
+              <p class="panel-kicker">Ergebnis</p>
+              <h2>Leaderboard Jahresersparnis</h2>
             </div>
             <div class="leaderboard-summary">
               <span id="entry-count">0 Eintraege</span>
             </div>
           </div>
 
-          <section class="admin-box">
+          <section class="admin-box" id="admin">
             <div>
               <p class="panel-kicker">Admin</p>
               <strong id="admin-status">Nicht angemeldet</strong>
