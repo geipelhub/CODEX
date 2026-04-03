@@ -22,34 +22,35 @@ Fuer dein Event solltest du Supabase verwenden, damit alle dieselbe Liste sehen.
 
 ### 1. Tabelle anlegen
 
-In Supabase SQL Editor:
+In Supabase SQL Editor kannst du direkt [supabase-setup.sql](C:\Users\Admin\OneDrive\Desktop\CODEX\supabase-setup.sql) verwenden.
 
-```sql
-create table if not exists leaderboard_entries (
-  id uuid primary key,
-  name text not null,
-  old_tariff_name text not null,
-  old_work_price_cents numeric not null,
-  old_base_price_euro numeric not null,
-  new_tariff_name text not null,
-  new_work_price_cents numeric not null,
-  new_base_price_euro numeric not null,
-  old_annual_cost numeric not null,
-  new_annual_cost numeric not null,
-  annual_savings numeric not null,
-  created_at timestamptz not null default now()
-);
-```
+Der Inhalt legt Tabelle, RLS-Policies und Realtime-Publication an.
 
-### 2. Schreib- und Leserechte freigeben
-
-Fuer ein unkompliziertes Event kannst du temporaer passende Policies setzen. Wenn du magst, kann ich dir im naechsten Schritt auch die genauen Supabase-RLS-Policies dafuer vorbereiten.
-
-### 3. Konfiguration hinterlegen
+### 2. Konfiguration hinterlegen
 
 1. [config.example.js](C:\Users\Admin\OneDrive\Desktop\CODEX\config.example.js) nach `config.js` kopieren
-2. Supabase URL und Anon Key eintragen
+2. Supabase URL und Publishable Key eintragen
+3. Danach `config.js` mit committen, weil die Seite auf GitHub Pages darauf zugreift
 
-### 4. Deployment
+Beispiel:
+
+```js
+window.APP_CONFIG = {
+  supabaseUrl: "https://your-project-ref.supabase.co",
+  supabaseAnonKey: "your-publishable-anon-key",
+};
+```
+
+### 3. Deployment
 
 Du kannst die Seite danach sehr leicht auf GitHub Pages oder Netlify hosten.
+
+Nach jeder Aenderung:
+
+```powershell
+& "C:\Program Files\Git\cmd\git.exe" add .
+& "C:\Program Files\Git\cmd\git.exe" commit -m "Configure shared leaderboard"
+& "C:\Program Files\Git\cmd\git.exe" push origin main
+```
+
+Dann ist die gemeinsame Seite wieder unter [https://geipelhub.github.io/CODEX/](https://geipelhub.github.io/CODEX/) erreichbar.
