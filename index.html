@@ -47,6 +47,12 @@
 
           <div id="form-message" class="form-message" hidden></div>
 
+          <div class="info-callout">
+            Feste Tarife werden direkt mit dem Arbeitspreis berechnet.
+            Dynamische Tarife werden als <strong>Schaetzung</strong> mit
+            durchschnittlichem Boersenpreis plus Aufschlag berechnet.
+          </div>
+
           <form id="savings-form" class="savings-form">
             <label>
               <span>Name</span>
@@ -64,8 +70,16 @@
               />
             </label>
 
+            <label>
+              <span>Alter Tariftyp</span>
+              <select id="old-tariff-type" name="oldTariffType">
+                <option value="fixed">Festpreis</option>
+                <option value="dynamic">Dynamisch</option>
+              </select>
+            </label>
+
             <div class="grid-two">
-              <label>
+              <label data-role="price-label" data-tariff="old">
                 <span>Alter Arbeitspreis (ct/kWh)</span>
                 <input
                   id="old-work-price"
@@ -92,6 +106,24 @@
               </label>
             </div>
 
+            <div class="grid-two tariff-extra-fields hidden" id="old-dynamic-fields">
+              <label>
+                <span>Alter Aufschlag (ct/kWh)</span>
+                <input
+                  id="old-markup"
+                  name="oldMarkup"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="4.50"
+                />
+              </label>
+              <label class="hint-card">
+                <span>Hinweis</span>
+                <p>Effektiver Arbeitspreis = Boersenpreis-Durchschnitt + Aufschlag</p>
+              </label>
+            </div>
+
             <label>
               <span>Neuer Tarifname</span>
               <input
@@ -103,8 +135,16 @@
               />
             </label>
 
+            <label>
+              <span>Neuer Tariftyp</span>
+              <select id="new-tariff-type" name="newTariffType">
+                <option value="fixed">Festpreis</option>
+                <option value="dynamic">Dynamisch</option>
+              </select>
+            </label>
+
             <div class="grid-two">
-              <label>
+              <label data-role="price-label" data-tariff="new">
                 <span>Neuer Arbeitspreis (ct/kWh)</span>
                 <input
                   id="new-work-price"
@@ -131,6 +171,24 @@
               </label>
             </div>
 
+            <div class="grid-two tariff-extra-fields hidden" id="new-dynamic-fields">
+              <label>
+                <span>Neuer Aufschlag (ct/kWh)</span>
+                <input
+                  id="new-markup"
+                  name="newMarkup"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="4.50"
+                />
+              </label>
+              <label class="hint-card">
+                <span>Hinweis</span>
+                <p>Bei dynamischen Tarifen bleibt die Jahresersparnis eine Annahme.</p>
+              </label>
+            </div>
+
             <div class="form-actions">
               <button type="submit">Zum Leaderboard hinzufuegen</button>
               <button type="button" id="reset-board" class="ghost-button">
@@ -151,6 +209,27 @@
             </div>
           </div>
 
+          <section class="admin-box">
+            <div>
+              <p class="panel-kicker">Admin</p>
+              <strong id="admin-status">Nicht angemeldet</strong>
+              <p class="admin-copy">
+                Nur Admins koennen Eintraege oder das gesamte Leaderboard loeschen.
+              </p>
+            </div>
+            <div class="admin-actions">
+              <button type="button" id="admin-login-button" class="ghost-button">
+                Admin-Login per E-Mail
+              </button>
+              <button type="button" id="admin-logout-button" class="ghost-button" hidden>
+                Admin-Logout
+              </button>
+              <button type="button" id="admin-clear-button" class="ghost-button danger-button" hidden>
+                Alle Eintraege loeschen
+              </button>
+            </div>
+          </section>
+
           <div class="leaderboard-table-wrap">
             <table class="leaderboard-table">
               <thead>
@@ -162,6 +241,7 @@
                   <th>Alt pro Jahr</th>
                   <th>Neu pro Jahr</th>
                   <th>Ersparnis</th>
+                  <th id="actions-head" hidden>Aktionen</th>
                 </tr>
               </thead>
               <tbody id="leaderboard-body"></tbody>
@@ -183,6 +263,11 @@
         <td class="old-total-cell"></td>
         <td class="new-total-cell"></td>
         <td class="savings-cell"></td>
+        <td class="actions-cell" hidden>
+          <button type="button" class="table-action-button delete-entry-button">
+            Loeschen
+          </button>
+        </td>
       </tr>
     </template>
 

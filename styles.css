@@ -174,7 +174,8 @@ label span {
   font-size: 0.95rem;
 }
 
-input {
+input,
+select {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 16px;
@@ -185,7 +186,8 @@ input {
   transition: border-color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
 }
 
-input:focus {
+input:focus,
+select:focus {
   outline: none;
   border-color: rgba(213, 93, 45, 0.7);
   box-shadow: 0 0 0 4px rgba(213, 93, 45, 0.12);
@@ -203,6 +205,34 @@ input:focus {
   gap: 12px;
   flex-wrap: wrap;
   margin-top: 8px;
+}
+
+.info-callout,
+.admin-box {
+  margin-top: 18px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: rgba(255, 248, 240, 0.76);
+}
+
+.tariff-extra-fields.hidden {
+  display: none;
+}
+
+.hint-card {
+  align-content: start;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px dashed rgba(31, 26, 22, 0.14);
+  background: rgba(255, 255, 255, 0.56);
+}
+
+.hint-card p,
+.admin-copy {
+  margin: 6px 0 0;
+  color: var(--muted);
+  line-height: 1.5;
 }
 
 button {
@@ -243,6 +273,19 @@ button[type="submit"] {
   background: var(--surface-strong);
   border: 1px solid var(--line);
   font-weight: 700;
+}
+
+.admin-box {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+}
+
+.admin-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .leaderboard-table-wrap {
@@ -305,6 +348,34 @@ tbody tr:nth-child(1) {
   color: var(--green);
 }
 
+.tariff-badge {
+  display: inline-flex;
+  margin-top: 8px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: rgba(15, 123, 87, 0.11);
+  color: var(--green);
+}
+
+.tariff-badge.estimate {
+  background: rgba(213, 93, 45, 0.12);
+  color: var(--accent-deep);
+}
+
+.danger-button,
+.table-action-button {
+  color: #7b2312;
+  background: rgba(255, 222, 214, 0.9);
+}
+
+.table-action-button {
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-weight: 700;
+}
+
 .empty-state {
   padding: 36px 20px;
   text-align: center;
@@ -358,6 +429,10 @@ tbody tr:nth-child(1) {
   .grid-two,
   .leaderboard-header {
     grid-template-columns: 1fr;
+    display: grid;
+  }
+
+  .admin-box {
     display: grid;
   }
 

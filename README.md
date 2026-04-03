@@ -25,6 +25,7 @@ Fuer dein Event solltest du Supabase verwenden, damit alle dieselbe Liste sehen.
 In Supabase SQL Editor kannst du direkt [supabase-setup.sql](C:\Users\Admin\OneDrive\Desktop\CODEX\supabase-setup.sql) verwenden.
 
 Der Inhalt legt Tabelle, RLS-Policies und Realtime-Publication an.
+Wenn du die App schon einmal eingerichtet hattest, fuehre die SQL-Datei bitte jetzt noch einmal aus, damit die neuen Spalten fuer dynamische Tarife und die Admin-Delete-Policy hinzugefuegt werden.
 
 ### 2. Konfiguration hinterlegen
 
@@ -44,6 +45,14 @@ window.APP_CONFIG = {
 ### 3. Deployment
 
 Du kannst die Seite danach sehr leicht auf GitHub Pages oder Netlify hosten.
+
+## Admin-Login
+
+Die App unterstuetzt einen Admin-Login per Supabase E-Mail-Link fuer `jaspergeipel@gmail.com`.
+
+Falls der Login-Link nicht sauber zur Seite zurueckkommt, setze in Supabase unter Authentication URL Configuration als erlaubte Redirect-URL:
+
+- `https://geipelhub.github.io/CODEX/`
 
 Nach jeder Aenderung:
 
