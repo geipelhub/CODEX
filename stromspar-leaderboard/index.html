@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wechselcafe Leaderboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Source+Serif+4:wght@600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="site-header-top">
+        <div class="site-brand">
+          <span class="site-brand-kicker">Bundesministerium fuer Wirtschaft, Energie und Tourismus</span>
+          <strong>BMWET Wechselcafe</strong>
+        </div>
+        <nav class="site-meta-nav" aria-label="Meta Navigation">
+          <a href="#form">Eintrag</a>
+          <a href="#leaderboard">Leaderboard</a>
+          <a href="#admin">Admin</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="page-shell">
+      <section class="hero">
+        <p class="eyebrow">Service</p>
+        <h1>Tarif wechseln, Kosten sparen</h1>
+        <p class="hero-copy">
+          Diese Anwendung unterstuetzt das Wechselcafe beim Vergleich von alten
+          und neuen Stromtarifen. Die Jahreskosten werden auf Basis von
+          <strong>3500 kWh pro Jahr</strong> berechnet und im Leaderboard
+          vergleichbar dargestellt.
+        </p>
+        <div class="hero-stats">
+          <article class="stat-card">
+            <span class="stat-label">Berechnungsbasis</span>
+            <strong>3500 kWh / Jahr</strong>
+          </article>
+          <article class="stat-card">
+            <span class="stat-label">Ziel</span>
+            <strong>Groesste Ersparnis</strong>
+          </article>
+          <article class="stat-card">
+            <span class="stat-label">Modus</span>
+            <strong id="sync-mode-badge">Lokaler Browser-Modus</strong>
+          </article>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <section class="panel form-panel" id="form">
+          <div class="panel-header">
+            <p class="panel-kicker">Neuer Eintrag</p>
+            <h2>Tarifvergleich erfassen</h2>
+          </div>
+
+          <div id="form-message" class="form-message" hidden></div>
+
+          <div class="info-callout">
+            Feste Tarife werden direkt mit dem Arbeitspreis berechnet.
+            Dynamische Tarife werden als <strong>Schaetzung</strong> mit
+            H0-inspiriertem Haushaltsprofil und 24h-Boersenpreisen gewichtet.
+          </div>
+
+          <form id="savings-form" class="savings-form">
+            <label>
+              <span>Name</span>
+              <input id="name" name="name" type="text" placeholder="z. B. Jasper" required />
+            </label>
+
+            <label>
+              <span>Alter Tarifname</span>
+              <input
+                id="old-tariff-name"
+                name="oldTariffName"
+                type="text"
+                placeholder="z. B. Grundversorgung"
+                required
+              />
+            </label>
+
+            <label>
+              <span>Alter Tariftyp</span>
+              <select id="old-tariff-type" name="oldTariffType">
+                <option value="fixed">Festpreis</option>
+                <option value="dynamic">Dynamisch</option>
+              </select>
+            </label>
+
+            <div class="grid-two">
+              <label data-role="price-label" data-tariff="old">
+                <span>Alter Arbeitspreis (ct/kWh)</span>
+                <input
+                  id="old-work-price"
+                  name="oldWorkPrice"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="40.50"
+                  required
+                />
+              </label>
+
+              <label>
+                <span>Alter Grundpreis (EUR/Jahr)</span>
+                <input
+                  id="old-base-price"
+                  name="oldBasePrice"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="180"
+                  required
+                />
+              </label>
+            </div>
+
+            <div class="grid-two tariff-extra-fields hidden" id="old-dynamic-fields">
+              <label>
+                <span>Alter Aufschlag (ct/kWh)</span>
+                <input
+                  id="old-markup"
+                  name="oldMarkup"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="4.50"
+                />
+              </label>
+              <label class="hint-card">
+                <span>Hinweis</span>
+                <p>Wenn 24 Stundenpreise hinterlegt sind, wird der Preis lastgewichtet statt nur gemittelt.</p>
+              </label>
+            </div>
+
+            <label class="tariff-extra-fields hidden" id="old-hourly-prices-wrap">
+              <span>24h Boersenpreise alt (ct/kWh, getrennt durch ; oder Zeilenumbruch)</span>
+              <textarea
+                id="old-hourly-prices"
+                name="oldHourlyPrices"
+                rows="4"
+                placeholder="8.2; 7.8; 7.5; 7.1; ..."
+              ></textarea>
+            </label>
+
+            <label>
+              <span>Neuer Tarifname</span>
+              <input
+                id="new-tariff-name"
+                name="newTariffName"
+                type="text"
+                placeholder="z. B. Oekostrom Fix"
+                required
+              />
+            </label>
+
+            <label>
+              <span>Neuer Tariftyp</span>
+              <select id="new-tariff-type" name="newTariffType">
+                <option value="fixed">Festpreis</option>
+                <option value="dynamic">Dynamisch</option>
+              </select>
+            </label>
+
+            <div class="grid-two">
+              <label data-role="price-label" data-tariff="new">
+                <span>Neuer Arbeitspreis (ct/kWh)</span>
+                <input
+                  id="new-work-price"
+                  name="newWorkPrice"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="31.20"
+                  required
+                />
+              </label>
+
+              <label>
+                <span>Neuer Grundpreis (EUR/Jahr)</span>
+                <input
+                  id="new-base-price"
+                  name="newBasePrice"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="144"
+                  required
+                />
+              </label>
+            </div>
+
+            <div class="grid-two tariff-extra-fields hidden" id="new-dynamic-fields">
+              <label>
+                <span>Neuer Aufschlag (ct/kWh)</span>
+                <input
+                  id="new-markup"
+                  name="newMarkup"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="4.50"
+                />
+              </label>
+              <label class="hint-card">
+                <span>Hinweis</span>
+                <p>Mit 24 Stundenpreisen wird die Sch‰tzung realistischer als mit einem bloﬂen Durchschnitt.</p>
+              </label>
+            </div>
+
+            <label class="tariff-extra-fields hidden" id="new-hourly-prices-wrap">
+              <span>24h Boersenpreise neu (ct/kWh, getrennt durch ; oder Zeilenumbruch)</span>
+              <textarea
+                id="new-hourly-prices"
+                name="newHourlyPrices"
+                rows="4"
+                placeholder="8.2; 7.8; 7.5; 7.1; ..."
+              ></textarea>
+            </label>
+
+            <div class="form-actions">
+              <button type="submit">Zum Leaderboard hinzufuegen</button>
+              <button type="button" id="reset-board" class="ghost-button">
+                Leaderboard leeren
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel leaderboard-panel" id="leaderboard">
+          <div class="panel-header leaderboard-header">
+            <div>
+              <p class="panel-kicker">Ergebnis</p>
+              <h2>Leaderboard Jahresersparnis</h2>
+            </div>
+            <div class="leaderboard-summary">
+              <span id="entry-count">0 Eintraege</span>
+            </div>
+          </div>
+
+          <section class="admin-box" id="admin">
+            <div>
+              <p class="panel-kicker">Admin</p>
+              <strong id="admin-status">Nicht angemeldet</strong>
+              <p class="admin-copy">
+                Nur Admins koennen Eintraege oder das gesamte Leaderboard loeschen.
+              </p>
+            </div>
+            <div class="admin-actions">
+              <label class="admin-password-field">
+                <span>Admin-Passwort</span>
+                <input
+                  id="admin-password"
+                  type="password"
+                  placeholder="Passwort eingeben"
+                  autocomplete="current-password"
+                />
+              </label>
+              <button type="button" id="admin-login-button" class="ghost-button">
+                Admin entsperren
+              </button>
+              <button type="button" id="admin-logout-button" class="ghost-button" hidden>
+                Sperren
+              </button>
+              <button type="button" id="admin-clear-button" class="ghost-button danger-button" hidden>
+                Alle Eintraege loeschen
+              </button>
+            </div>
+          </section>
+
+          <div class="leaderboard-table-wrap">
+            <table class="leaderboard-table">
+              <thead>
+                <tr>
+                  <th>Platz</th>
+                  <th>Name</th>
+                  <th>Alt</th>
+                  <th>Neu</th>
+                  <th>Alt pro Jahr</th>
+                  <th>Neu pro Jahr</th>
+                  <th>Ersparnis</th>
+                  <th id="actions-head" hidden>Aktionen</th>
+                </tr>
+              </thead>
+              <tbody id="leaderboard-body"></tbody>
+            </table>
+            <div id="empty-state" class="empty-state">
+              Noch keine Eintraege. Der erste Tarifwechsel setzt die Messlatte.
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <template id="row-template">
+      <tr>
+        <td class="rank-cell"></td>
+        <td class="name-cell"></td>
+        <td class="tariff-cell old-cell"></td>
+        <td class="tariff-cell new-cell"></td>
+        <td class="old-total-cell"></td>
+        <td class="new-total-cell"></td>
+        <td class="savings-cell"></td>
+        <td class="actions-cell" hidden>
+          <button type="button" class="table-action-button delete-entry-button">
+            Loeschen
+          </button>
+        </td>
+      </tr>
+    </template>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Europa Spotpreise Strom</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Source+Serif+4:wght@600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="site-header-top">
+        <div class="site-brand">
+          <span class="site-brand-kicker">Europaweite Day-Ahead Uebersicht</span>
+          <strong>Spotpreise Strom</strong>
+        </div>
+        <button id="refresh-button" class="ghost-button" type="button">
+          Daten neu laden
+        </button>
+      </div>
+    </header>
+
+    <main class="page-shell">
+      <section class="hero">
+        <p class="eyebrow">Live Visualisierung</p>
+        <h1>Europakarte mit aktuellem Tagesschnitt</h1>
+        <p class="hero-copy">
+          Die Karte zeigt den heutigen Day-Ahead-Tagesschnitt je Land. Ein Klick auf ein
+          verfuegbares Land oeffnet rechts den Verlauf der letzten 30 Tage und die heutige
+          Stundenstruktur.
+        </p>
+        <div class="hero-stats">
+          <article class="stat-card">
+            <span class="stat-label">Stand</span>
+            <strong id="as-of-value">Laedt...</strong>
+          </article>
+          <article class="stat-card">
+            <span class="stat-label">Niedrigster Tagesschnitt</span>
+            <strong id="lowest-value">Laedt...</strong>
+          </article>
+          <article class="stat-card">
+            <span class="stat-label">Hoechster Tagesschnitt</span>
+            <strong id="highest-value">Laedt...</strong>
+          </article>
+          <article class="stat-card">
+            <span class="stat-label">Abgedeckte Maerkte</span>
+            <strong id="coverage-value">Laedt...</strong>
+          </article>
+        </div>
+      </section>
+
+      <div id="status-banner" class="status-banner is-loading">
+        Spotpreisdaten und Kartengeometrie werden geladen.
+      </div>
+
+      <section class="workspace">
+        <section class="panel map-panel">
+          <div class="panel-header">
+            <p class="panel-kicker">Karte</p>
+            <h2>Tagesschnitt heute</h2>
+          </div>
+
+          <div class="map-meta">
+            <div class="legend" aria-label="Preislegende">
+              <span>guenstiger</span>
+              <div class="legend-gradient"></div>
+              <span>teurer</span>
+            </div>
+            <p class="map-hint">
+              Klickbare Laender sind eingefaerbt. Grau bedeutet: in dieser Ansicht aktuell keine Daten.
+            </p>
+          </div>
+
+          <div class="map-shell">
+            <svg id="europe-map" viewBox="0 0 960 680" role="img" aria-label="Europakarte der Spotpreise"></svg>
+            <div id="map-tooltip" class="map-tooltip" hidden></div>
+          </div>
+
+          <div class="country-grid-wrap">
+            <div class="country-grid-header">
+              <h3>Heute verfuegbar</h3>
+              <span id="country-count">0 Laender</span>
+            </div>
+            <div id="country-grid" class="country-grid"></div>
+          </div>
+        </section>
+
+        <aside class="panel detail-panel">
+          <div class="panel-header">
+            <p class="panel-kicker">Detail</p>
+            <h2 id="detail-title">Land auswaehlen</h2>
+          </div>
+
+          <p id="detail-copy" class="detail-copy">
+            Waehle ein eingefaerbtes Land auf der Karte, um den Verlauf und die heutigen Stundenwerte zu sehen.
+          </p>
+
+          <div class="detail-stats">
+            <article class="detail-stat">
+              <span>Heute</span>
+              <strong id="detail-average">-</strong>
+            </article>
+            <article class="detail-stat">
+              <span>Minimum</span>
+              <strong id="detail-minimum">-</strong>
+            </article>
+            <article class="detail-stat">
+              <span>Maximum</span>
+              <strong id="detail-maximum">-</strong>
+            </article>
+            <article class="detail-stat">
+              <span>Zonen</span>
+              <strong id="detail-zones">-</strong>
+            </article>
+          </div>
+
+          <section class="chart-block">
+            <div class="chart-header">
+              <h3>Verlauf der letzten 30 Tage</h3>
+              <span id="history-range">-</span>
+            </div>
+            <svg id="history-chart" viewBox="0 0 520 240" role="img" aria-label="Verlauf der Spotpreise"></svg>
+          </section>
+
+          <section class="chart-block">
+            <div class="chart-header">
+              <h3>Heute im Tagesverlauf</h3>
+              <span id="intraday-range">-</span>
+            </div>
+            <svg id="intraday-chart" viewBox="0 0 520 240" role="img" aria-label="Stundenwerte heute"></svg>
+          </section>
+
+          <section class="source-box">
+            <h3>Quelle</h3>
+            <p>
+              Preisfeed: <a href="https://spot.utilitarian.io/developer/" target="_blank" rel="noreferrer">Utilitarian Spot API</a>
+              auf Basis von ENTSO-E Day-Ahead Daten.
+            </p>
+          </section>
+        </aside>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
+    <script src="script.js"></script>
+  </body>
+</html>

@@ -1,77 +1,15 @@
-# Stromspar-Leaderboard
+# CODEX Projekte
 
-Kleine Web-App fuer ein Lunch-and-Learn-Wechselcafe rund um Stromtarifwechsel.
+Dieser Ordner ist jetzt wieder der Container fuer mehrere getrennte Projekte.
 
-Features:
-- Eingabe von Name, altem Tarif und neuem Tarif
-- Berechnung der Jahreskosten auf Basis von `3500 kWh`
-- Automatische Ersparnisberechnung
-- Smartere Schaetzung fuer dynamische Tarife mit 24h-Boersenpreisen und H0-inspirierter Lastgewichtung
-- Sortiertes Leaderboard nach groesster Ersparnis
-- Lokaler Fallback ohne Backend
-- Gemeinsames Live-Leaderboard mit Supabase
+## Projekte
 
-## Lokal starten
+- [visual-token-tool](C:\Users\Admin\OneDrive\Desktop\CODEX\visual-token-tool): Dashboard fuer OpenAI-Tokenverbrauch
+- [strompreis-karte](C:\Users\Admin\OneDrive\Desktop\CODEX\strompreis-karte): Europakarte fuer Day-Ahead-Strompreise
+- [stromspar-leaderboard](C:\Users\Admin\OneDrive\Desktop\CODEX\stromspar-leaderboard): Leaderboard fuer Tarifwechsel und Ersparnisse
 
-1. [index.html](C:\Users\Admin\OneDrive\Desktop\CODEX\index.html) im Browser oeffnen
+## Start
 
-Ohne weiteres Setup speichert die App nur lokal im Browser.
-
-## Gemeinsames Leaderboard fuer mehrere Laptops
-
-Fuer dein Event solltest du Supabase verwenden, damit alle dieselbe Liste sehen.
-
-### 1. Tabelle anlegen
-
-In Supabase SQL Editor kannst du direkt [supabase-setup.sql](C:\Users\Admin\OneDrive\Desktop\CODEX\supabase-setup.sql) verwenden.
-
-Der Inhalt legt Tabelle, RLS-Policies, Admin-RPC-Funktionen und Realtime-Publication an.
-Wenn du die App schon einmal eingerichtet hattest, fuehre die SQL-Datei bitte jetzt noch einmal aus, damit die neuen Spalten fuer dynamische Tarife und die Passwort-Admin-Logik hinzugefuegt werden.
-
-### 2. Konfiguration hinterlegen
-
-1. [config.example.js](C:\Users\Admin\OneDrive\Desktop\CODEX\config.example.js) nach `config.js` kopieren
-2. Supabase URL und Publishable Key eintragen
-3. Danach `config.js` mit committen, weil die Seite auf GitHub Pages darauf zugreift
-
-Beispiel:
-
-```js
-window.APP_CONFIG = {
-  supabaseUrl: "https://your-project-ref.supabase.co",
-  supabaseAnonKey: "your-publishable-anon-key",
-};
-```
-
-### 3. Deployment
-
-Du kannst die Seite danach sehr leicht auf GitHub Pages oder Netlify hosten.
-
-## Admin-Modus
-
-Die App unterstuetzt einen Admin-Modus per lokalem Passwortfeld.
-
-Das Startpasswort aus [supabase-setup.sql](C:\Users\Admin\OneDrive\Desktop\CODEX\supabase-setup.sql) ist:
-
-- `Wechselcafe-Admin-2026`
-
-Das Passwort wird in der Website eingegeben und ueber sichere Supabase-RPC-Funktionen geprueft. Danach koennen Eintraege einzeln oder komplett geloescht werden.
-
-## Dynamische Tarife
-
-Bei dynamischen Tarifen kannst du optional 24 Stundenpreise des Tages in `ct/kWh` eingeben.
-
-- Trennung per `;` oder Zeilenumbruch
-- genau 24 Werte
-- wenn 24 Werte vorhanden sind, wird ein H0-inspiriertes Haushaltsprofil zur Gewichtung verwendet
-- wenn keine 24 Werte vorhanden sind, faellt die App auf den durchschnittlichen Boersenpreis als Fallback zurueck
-
-Nach jeder Aenderung:
-
-```powershell
-& "C:\Program Files\Git\cmd\git.exe" add .
-& "C:\Program Files\Git\cmd\git.exe" commit -m "Configure shared leaderboard"
-& "C:\Program Files\Git\cmd\git.exe" push origin main
-```
-
-Dann ist die gemeinsame Seite wieder unter [https://geipelhub.github.io/CODEX/](https://geipelhub.github.io/CODEX/) erreichbar.
+- [visual-token-tool\index.html](C:\Users\Admin\OneDrive\Desktop\CODEX\visual-token-tool\index.html)
+- [strompreis-karte\index.html](C:\Users\Admin\OneDrive\Desktop\CODEX\strompreis-karte\index.html)
+- [stromspar-leaderboard\index.html](C:\Users\Admin\OneDrive\Desktop\CODEX\stromspar-leaderboard\index.html)
