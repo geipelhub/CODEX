@@ -106,7 +106,7 @@ adminLoginButton.addEventListener("click", async () => {
   });
 
   if (error) {
-    showMessage("Admin-Login konnte nicht gestartet werden.", "error");
+    showMessage(`Admin-Login konnte nicht gestartet werden: ${error.message}`, "error");
     return;
   }
 
