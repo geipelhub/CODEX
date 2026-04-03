@@ -3,6 +3,7 @@ create extension if not exists pgcrypto;
 create table if not exists public.leaderboard_entries (
   id uuid primary key,
   name text not null check (char_length(trim(name)) > 0),
+  annual_consumption_kwh numeric not null default 3500 check (annual_consumption_kwh > 0),
   old_tariff_name text not null check (char_length(trim(old_tariff_name)) > 0),
   old_tariff_type text not null default 'fixed' check (old_tariff_type in ('fixed', 'dynamic')),
   old_work_price_cents numeric not null check (old_work_price_cents >= 0),
@@ -24,10 +25,12 @@ create table if not exists public.leaderboard_entries (
   old_annual_cost numeric not null,
   new_annual_cost numeric not null,
   annual_savings numeric not null,
+  savings_percent numeric not null default 0,
   estimated boolean not null default false,
   created_at timestamptz not null default now()
 );
 
+alter table public.leaderboard_entries add column if not exists annual_consumption_kwh numeric not null default 3500;
 alter table public.leaderboard_entries add column if not exists old_tariff_type text not null default 'fixed';
 alter table public.leaderboard_entries add column if not exists old_market_price_cents numeric;
 alter table public.leaderboard_entries add column if not exists old_average_market_price_cents numeric;
@@ -40,6 +43,7 @@ alter table public.leaderboard_entries add column if not exists new_average_mark
 alter table public.leaderboard_entries add column if not exists new_markup_cents numeric not null default 0;
 alter table public.leaderboard_entries add column if not exists new_price_source text not null default 'fixed';
 alter table public.leaderboard_entries add column if not exists new_hourly_prices_text text;
+alter table public.leaderboard_entries add column if not exists savings_percent numeric not null default 0;
 alter table public.leaderboard_entries add column if not exists estimated boolean not null default false;
 
 alter table public.leaderboard_entries enable row level security;

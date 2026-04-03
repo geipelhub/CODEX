@@ -1,4 +1,4 @@
-const ANNUAL_CONSUMPTION_KWH = 3500;
+const DEFAULT_ANNUAL_CONSUMPTION_KWH = 3500;
 const STORAGE_KEY = "stromspar-leaderboard";
 const ADMIN_PASSWORD_STORAGE_KEY = "leaderboard-admin-password";
 const H0_DAILY_LOAD_PROFILE_WEIGHTS = [
@@ -20,11 +20,13 @@ const adminLoginButton = document.getElementById("admin-login-button");
 const adminLogoutButton = document.getElementById("admin-logout-button");
 const adminClearButton = document.getElementById("admin-clear-button");
 const actionsHead = document.getElementById("actions-head");
+const sortModeSelect = document.getElementById("sort-mode");
 
 const supabaseClient = createSupabaseClient();
 let entries = [];
 let isAdmin = false;
 let adminPassword = sessionStorage.getItem(ADMIN_PASSWORD_STORAGE_KEY) || "";
+let sortMode = "absolute";
 
 initializeApp();
 
@@ -36,6 +38,11 @@ document.getElementById("new-tariff-type").addEventListener("change", () => {
   updateTariffInputs("new");
 });
 
+sortModeSelect.addEventListener("change", () => {
+  sortMode = sortModeSelect.value;
+  renderEntries();
+});
+
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
 
@@ -43,6 +50,7 @@ form.addEventListener("submit", async (event) => {
     const formData = new FormData(form);
     const entry = createEntry({
       name: formData.get("name"),
+      annualConsumption: formData.get("annualConsumption"),
       oldTariffName: formData.get("oldTariffName"),
       oldTariffType: formData.get("oldTariffType"),
       oldWorkPrice: formData.get("oldWorkPrice"),
@@ -70,6 +78,7 @@ form.addEventListener("submit", async (event) => {
     }
 
     form.reset();
+    document.getElementById("annual-consumption").value = String(DEFAULT_ANNUAL_CONSUMPTION_KWH);
     updateTariffInputs("old");
     updateTariffInputs("new");
     document.getElementById("name").focus();
@@ -154,6 +163,7 @@ adminClearButton.addEventListener("click", async () => {
 });
 
 function createEntry(data) {
+  const annualConsumptionKwh = parseNumericValue(data.annualConsumption);
   const oldTariffType = parseTariffType(data.oldTariffType);
   const oldTariffMetrics = resolveTariffMetrics({
     tariffType: oldTariffType,
@@ -173,13 +183,16 @@ function createEntry(data) {
   const newBasePriceEuro = parseNumericValue(data.newBasePrice);
 
   const oldAnnualCost =
-    (ANNUAL_CONSUMPTION_KWH * oldTariffMetrics.effectiveWorkPriceCents) / 100 + oldBasePriceEuro;
+    (annualConsumptionKwh * oldTariffMetrics.effectiveWorkPriceCents) / 100 + oldBasePriceEuro;
   const newAnnualCost =
-    (ANNUAL_CONSUMPTION_KWH * newTariffMetrics.effectiveWorkPriceCents) / 100 + newBasePriceEuro;
+    (annualConsumptionKwh * newTariffMetrics.effectiveWorkPriceCents) / 100 + newBasePriceEuro;
+  const annualSavings = oldAnnualCost - newAnnualCost;
+  const savingsPercent = oldAnnualCost > 0 ? (annualSavings / oldAnnualCost) * 100 : 0;
 
   return {
     id: crypto.randomUUID(),
     name: String(data.name).trim(),
+    annualConsumptionKwh,
     oldTariffName: String(data.oldTariffName).trim(),
     oldTariffType,
     oldMarketPriceCents: oldTariffMetrics.marketPriceCents,
@@ -202,7 +215,8 @@ function createEntry(data) {
     newBasePriceEuro,
     oldAnnualCost,
     newAnnualCost,
-    annualSavings: oldAnnualCost - newAnnualCost,
+    annualSavings,
+    savingsPercent,
     createdAt: new Date().toISOString(),
   };
 }
@@ -321,8 +335,21 @@ function createSupabaseClient() {
 
 function sortEntries() {
   entries.sort((left, right) => {
+    const primaryMetric =
+      sortMode === "percentage"
+        ? right.savingsPercent - left.savingsPercent
+        : right.annualSavings - left.annualSavings;
+
+    if (primaryMetric !== 0) {
+      return primaryMetric;
+    }
+
     if (right.annualSavings !== left.annualSavings) {
       return right.annualSavings - left.annualSavings;
+    }
+
+    if (right.savingsPercent !== left.savingsPercent) {
+      return right.savingsPercent - left.savingsPercent;
     }
 
     return left.createdAt.localeCompare(right.createdAt);
@@ -352,6 +379,7 @@ async function initializeApp() {
   updateTariffInputs("old");
   updateTariffInputs("new");
   initializeAdminSession();
+  document.getElementById("annual-consumption").value = String(DEFAULT_ANNUAL_CONSUMPTION_KWH);
   await refreshEntries();
 
   if (supabaseClient) {
@@ -377,9 +405,7 @@ async function refreshEntries() {
 async function loadEntriesFromSupabase() {
   const { data, error } = await supabaseClient
     .from("leaderboard_entries")
-    .select("*")
-    .order("annual_savings", { ascending: false })
-    .order("created_at", { ascending: true });
+    .select("*");
 
   if (error) {
     showMessage(
@@ -396,6 +422,7 @@ async function saveEntryToSupabase(entry) {
   const payload = {
     id: entry.id,
     name: entry.name,
+    annual_consumption_kwh: entry.annualConsumptionKwh,
     old_tariff_name: entry.oldTariffName,
     old_tariff_type: entry.oldTariffType,
     old_work_price_cents: entry.oldWorkPriceCents,
@@ -417,6 +444,7 @@ async function saveEntryToSupabase(entry) {
     old_annual_cost: entry.oldAnnualCost,
     new_annual_cost: entry.newAnnualCost,
     annual_savings: entry.annualSavings,
+    savings_percent: entry.savingsPercent,
     estimated: entry.oldEstimated || entry.newEstimated,
     created_at: entry.createdAt,
   };
@@ -468,6 +496,10 @@ function mapSupabaseRowToEntry(row) {
   return {
     id: row.id,
     name: row.name,
+    annualConsumptionKwh:
+      row.annual_consumption_kwh === null || row.annual_consumption_kwh === undefined
+        ? DEFAULT_ANNUAL_CONSUMPTION_KWH
+        : Number(row.annual_consumption_kwh),
     oldTariffName: row.old_tariff_name,
     oldTariffType: row.old_tariff_type || "fixed",
     oldWorkPriceCents: Number(row.old_work_price_cents),
@@ -491,6 +523,7 @@ function mapSupabaseRowToEntry(row) {
     oldAnnualCost: Number(row.old_annual_cost),
     newAnnualCost: Number(row.new_annual_cost),
     annualSavings: Number(row.annual_savings),
+    savingsPercent: row.savings_percent === null || row.savings_percent === undefined ? 0 : Number(row.savings_percent),
     estimated: Boolean(row.estimated),
     createdAt: row.created_at,
   };
@@ -509,9 +542,11 @@ function renderEntries() {
 
     row.querySelector(".rank-cell").textContent = `#${index + 1}`;
     row.querySelector(".name-cell").textContent = entry.name;
+    row.querySelector(".consumption-cell").textContent = formatKwh(entry.annualConsumptionKwh);
     row.querySelector(".old-total-cell").textContent = formatEuro(entry.oldAnnualCost);
     row.querySelector(".new-total-cell").textContent = formatEuro(entry.newAnnualCost);
-    row.querySelector(".savings-cell").textContent = formatEuro(entry.annualSavings);
+    row.querySelector(".savings-absolute-cell").textContent = formatEuro(entry.annualSavings);
+    row.querySelector(".savings-percent-cell").textContent = formatPercent(entry.savingsPercent);
 
     fillTariffCell(row.querySelector(".old-cell"), {
       tariffName: entry.oldTariffName,
@@ -607,6 +642,19 @@ function formatNumber(value) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(value);
+}
+
+function formatPercent(value) {
+  return new Intl.NumberFormat("de-DE", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(value) + " %";
+}
+
+function formatKwh(value) {
+  return new Intl.NumberFormat("de-DE", {
+    maximumFractionDigits: 0,
+  }).format(value) + " kWh";
 }
 
 function escapeHtml(value) {
