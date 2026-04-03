@@ -213,7 +213,8 @@ label span {
 }
 
 input,
-select {
+select,
+textarea {
   width: 100%;
   border: 1px solid #c8d8e0;
   border-radius: var(--radius-sm);
@@ -225,10 +226,16 @@ select {
 }
 
 input:focus,
-select:focus {
+select:focus,
+textarea:focus {
   outline: none;
   border-color: var(--brand);
   box-shadow: 0 0 0 4px rgba(15, 93, 117, 0.14);
+}
+
+textarea {
+  resize: vertical;
+  min-height: 108px;
 }
 
 .grid-two {

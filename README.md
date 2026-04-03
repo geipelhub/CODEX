@@ -6,6 +6,7 @@ Features:
 - Eingabe von Name, altem Tarif und neuem Tarif
 - Berechnung der Jahreskosten auf Basis von `3500 kWh`
 - Automatische Ersparnisberechnung
+- Smartere Schaetzung fuer dynamische Tarife mit 24h-Boersenpreisen und H0-inspirierter Lastgewichtung
 - Sortiertes Leaderboard nach groesster Ersparnis
 - Lokaler Fallback ohne Backend
 - Gemeinsames Live-Leaderboard mit Supabase
@@ -55,6 +56,15 @@ Das Startpasswort aus [supabase-setup.sql](C:\Users\Admin\OneDrive\Desktop\CODEX
 - `Wechselcafe-Admin-2026`
 
 Das Passwort wird in der Website eingegeben und ueber sichere Supabase-RPC-Funktionen geprueft. Danach koennen Eintraege einzeln oder komplett geloescht werden.
+
+## Dynamische Tarife
+
+Bei dynamischen Tarifen kannst du optional 24 Stundenpreise des Tages in `ct/kWh` eingeben.
+
+- Trennung per `;` oder Zeilenumbruch
+- genau 24 Werte
+- wenn 24 Werte vorhanden sind, wird ein H0-inspiriertes Haushaltsprofil zur Gewichtung verwendet
+- wenn keine 24 Werte vorhanden sind, faellt die App auf den durchschnittlichen Boersenpreis als Fallback zurueck
 
 Nach jeder Aenderung:
 

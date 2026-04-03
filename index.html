@@ -65,7 +65,7 @@
           <div class="info-callout">
             Feste Tarife werden direkt mit dem Arbeitspreis berechnet.
             Dynamische Tarife werden als <strong>Schaetzung</strong> mit
-            durchschnittlichem Boersenpreis plus Aufschlag berechnet.
+            H0-inspiriertem Haushaltsprofil und 24h-Boersenpreisen gewichtet.
           </div>
 
           <form id="savings-form" class="savings-form">
@@ -135,9 +135,19 @@
               </label>
               <label class="hint-card">
                 <span>Hinweis</span>
-                <p>Effektiver Arbeitspreis = Boersenpreis-Durchschnitt + Aufschlag</p>
+                <p>Wenn 24 Stundenpreise hinterlegt sind, wird der Preis lastgewichtet statt nur gemittelt.</p>
               </label>
             </div>
+
+            <label class="tariff-extra-fields hidden" id="old-hourly-prices-wrap">
+              <span>24h Boersenpreise alt (ct/kWh, getrennt durch ; oder Zeilenumbruch)</span>
+              <textarea
+                id="old-hourly-prices"
+                name="oldHourlyPrices"
+                rows="4"
+                placeholder="8.2; 7.8; 7.5; 7.1; ..."
+              ></textarea>
+            </label>
 
             <label>
               <span>Neuer Tarifname</span>
@@ -200,9 +210,19 @@
               </label>
               <label class="hint-card">
                 <span>Hinweis</span>
-                <p>Bei dynamischen Tarifen bleibt die Jahresersparnis eine Annahme.</p>
+                <p>Mit 24 Stundenpreisen wird die Schätzung realistischer als mit einem bloßen Durchschnitt.</p>
               </label>
             </div>
+
+            <label class="tariff-extra-fields hidden" id="new-hourly-prices-wrap">
+              <span>24h Boersenpreise neu (ct/kWh, getrennt durch ; oder Zeilenumbruch)</span>
+              <textarea
+                id="new-hourly-prices"
+                name="newHourlyPrices"
+                rows="4"
+                placeholder="8.2; 7.8; 7.5; 7.1; ..."
+              ></textarea>
+            </label>
 
             <div class="form-actions">
               <button type="submit">Zum Leaderboard hinzufuegen</button>

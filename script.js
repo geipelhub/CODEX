@@ -1,6 +1,10 @@
 const ANNUAL_CONSUMPTION_KWH = 3500;
 const STORAGE_KEY = "stromspar-leaderboard";
 const ADMIN_PASSWORD_STORAGE_KEY = "leaderboard-admin-password";
+const H0_DAILY_LOAD_PROFILE_WEIGHTS = [
+  36, 30, 27, 25, 24, 27, 34, 42, 39, 35, 33, 33,
+  34, 33, 32, 34, 39, 46, 53, 57, 54, 47, 41, 35,
+].map((value) => value / 890);
 
 const form = document.getElementById("savings-form");
 const leaderboardBody = document.getElementById("leaderboard-body");
@@ -44,11 +48,13 @@ form.addEventListener("submit", async (event) => {
       oldWorkPrice: formData.get("oldWorkPrice"),
       oldBasePrice: formData.get("oldBasePrice"),
       oldMarkup: formData.get("oldMarkup"),
+      oldHourlyPrices: formData.get("oldHourlyPrices"),
       newTariffName: formData.get("newTariffName"),
       newTariffType: formData.get("newTariffType"),
       newWorkPrice: formData.get("newWorkPrice"),
       newBasePrice: formData.get("newBasePrice"),
       newMarkup: formData.get("newMarkup"),
+      newHourlyPrices: formData.get("newHourlyPrices"),
     });
 
     if (supabaseClient) {
@@ -153,21 +159,23 @@ function createEntry(data) {
     tariffType: oldTariffType,
     workPrice: data.oldWorkPrice,
     markup: data.oldMarkup,
+    hourlyPrices: data.oldHourlyPrices,
   });
-  const oldBasePriceEuro = parseCurrencyValue(data.oldBasePrice);
+  const oldBasePriceEuro = parseNumericValue(data.oldBasePrice);
+
   const newTariffType = parseTariffType(data.newTariffType);
   const newTariffMetrics = resolveTariffMetrics({
     tariffType: newTariffType,
     workPrice: data.newWorkPrice,
     markup: data.newMarkup,
+    hourlyPrices: data.newHourlyPrices,
   });
-  const newBasePriceEuro = parseCurrencyValue(data.newBasePrice);
+  const newBasePriceEuro = parseNumericValue(data.newBasePrice);
 
   const oldAnnualCost =
     (ANNUAL_CONSUMPTION_KWH * oldTariffMetrics.effectiveWorkPriceCents) / 100 + oldBasePriceEuro;
   const newAnnualCost =
     (ANNUAL_CONSUMPTION_KWH * newTariffMetrics.effectiveWorkPriceCents) / 100 + newBasePriceEuro;
-  const annualSavings = oldAnnualCost - newAnnualCost;
 
   return {
     id: crypto.randomUUID(),
@@ -177,56 +185,118 @@ function createEntry(data) {
     oldMarketPriceCents: oldTariffMetrics.marketPriceCents,
     oldMarkupCents: oldTariffMetrics.markupCents,
     oldEstimated: oldTariffMetrics.isEstimate,
+    oldPriceSource: oldTariffMetrics.priceSource,
+    oldHourlyPricesText: oldTariffMetrics.hourlyPricesText,
+    oldAverageMarketPriceCents: oldTariffMetrics.averageMarketPriceCents,
     newTariffName: String(data.newTariffName).trim(),
     newTariffType,
     newMarketPriceCents: newTariffMetrics.marketPriceCents,
     newMarkupCents: newTariffMetrics.markupCents,
     newEstimated: newTariffMetrics.isEstimate,
+    newPriceSource: newTariffMetrics.priceSource,
+    newHourlyPricesText: newTariffMetrics.hourlyPricesText,
+    newAverageMarketPriceCents: newTariffMetrics.averageMarketPriceCents,
     oldWorkPriceCents: oldTariffMetrics.effectiveWorkPriceCents,
     oldBasePriceEuro,
     newWorkPriceCents: newTariffMetrics.effectiveWorkPriceCents,
     newBasePriceEuro,
     oldAnnualCost,
     newAnnualCost,
-    annualSavings,
+    annualSavings: oldAnnualCost - newAnnualCost,
     createdAt: new Date().toISOString(),
   };
-}
-
-function parseCurrencyValue(rawValue) {
-  const normalized = String(rawValue).replace(",", ".").trim();
-  const parsedValue = Number.parseFloat(normalized);
-
-  if (Number.isNaN(parsedValue) || parsedValue < 0) {
-    throw new Error("Ungueltiger Preiswert.");
-  }
-
-  return parsedValue;
 }
 
 function parseTariffType(rawValue) {
   return rawValue === "dynamic" ? "dynamic" : "fixed";
 }
 
-function resolveTariffMetrics({ tariffType, workPrice, markup }) {
-  const primaryPrice = parseCurrencyValue(workPrice);
+function parseNumericValue(rawValue, { allowNegative = false } = {}) {
+  const normalized = String(rawValue).replace(",", ".").trim();
+  const parsedValue = Number.parseFloat(normalized);
 
+  if (Number.isNaN(parsedValue)) {
+    throw new Error("Ungueltiger Preiswert.");
+  }
+
+  if (!allowNegative && parsedValue < 0) {
+    throw new Error("Preiswerte duerfen nicht negativ sein.");
+  }
+
+  return parsedValue;
+}
+
+function parseHourlyPriceSeries(rawValue) {
+  const rawText = String(rawValue || "").trim();
+
+  if (!rawText) {
+    return [];
+  }
+
+  const tokens = rawText
+    .split(/[\n;]+/)
+    .map((token) => token.trim())
+    .filter(Boolean);
+
+  if (tokens.length !== 24) {
+    throw new Error("Bitte genau 24 Stundenpreise fuer dynamische Tarife eingeben.");
+  }
+
+  return tokens.map((token) => parseNumericValue(token, { allowNegative: true }));
+}
+
+function resolveTariffMetrics({ tariffType, workPrice, markup, hourlyPrices }) {
   if (tariffType === "dynamic") {
-    const markupCents = parseCurrencyValue(markup || "0");
+    const markupCents = parseNumericValue(markup || "0");
+    const parsedHourlyPrices = parseHourlyPriceSeries(hourlyPrices);
+
+    if (parsedHourlyPrices.length === 24) {
+      const weightedMarketPriceCents = calculateSlpWeightedMarketPrice(parsedHourlyPrices);
+      const averageMarketPriceCents = calculateAverage(parsedHourlyPrices);
+
+      return {
+        marketPriceCents: weightedMarketPriceCents,
+        averageMarketPriceCents,
+        markupCents,
+        effectiveWorkPriceCents: weightedMarketPriceCents + markupCents,
+        isEstimate: true,
+        priceSource: "slp_hourly",
+        hourlyPricesText: parsedHourlyPrices.map((value) => formatNumber(value)).join("; "),
+      };
+    }
+
+    const fallbackAveragePriceCents = parseNumericValue(workPrice, { allowNegative: true });
     return {
-      marketPriceCents: primaryPrice,
+      marketPriceCents: fallbackAveragePriceCents,
+      averageMarketPriceCents: fallbackAveragePriceCents,
       markupCents,
-      effectiveWorkPriceCents: primaryPrice + markupCents,
+      effectiveWorkPriceCents: fallbackAveragePriceCents + markupCents,
       isEstimate: true,
+      priceSource: "average_fallback",
+      hourlyPricesText: "",
     };
   }
 
+  const fixedWorkPriceCents = parseNumericValue(workPrice);
   return {
     marketPriceCents: null,
+    averageMarketPriceCents: null,
     markupCents: 0,
-    effectiveWorkPriceCents: primaryPrice,
+    effectiveWorkPriceCents: fixedWorkPriceCents,
     isEstimate: false,
+    priceSource: "fixed",
+    hourlyPricesText: "",
   };
+}
+
+function calculateSlpWeightedMarketPrice(hourlyPrices) {
+  return hourlyPrices.reduce((total, value, index) => {
+    return total + value * H0_DAILY_LOAD_PROFILE_WEIGHTS[index];
+  }, 0);
+}
+
+function calculateAverage(values) {
+  return values.reduce((total, value) => total + value, 0) / values.length;
 }
 
 function createSupabaseClient() {
@@ -330,13 +400,19 @@ async function saveEntryToSupabase(entry) {
     old_tariff_type: entry.oldTariffType,
     old_work_price_cents: entry.oldWorkPriceCents,
     old_market_price_cents: entry.oldMarketPriceCents,
+    old_average_market_price_cents: entry.oldAverageMarketPriceCents,
     old_markup_cents: entry.oldMarkupCents,
+    old_price_source: entry.oldPriceSource,
+    old_hourly_prices_text: entry.oldHourlyPricesText,
     old_base_price_euro: entry.oldBasePriceEuro,
     new_tariff_name: entry.newTariffName,
     new_tariff_type: entry.newTariffType,
     new_work_price_cents: entry.newWorkPriceCents,
     new_market_price_cents: entry.newMarketPriceCents,
+    new_average_market_price_cents: entry.newAverageMarketPriceCents,
     new_markup_cents: entry.newMarkupCents,
+    new_price_source: entry.newPriceSource,
+    new_hourly_prices_text: entry.newHourlyPricesText,
     new_base_price_euro: entry.newBasePriceEuro,
     old_annual_cost: entry.oldAnnualCost,
     new_annual_cost: entry.newAnnualCost,
@@ -350,9 +426,7 @@ async function saveEntryToSupabase(entry) {
     .insert(payload);
 
   if (error) {
-    throw new Error(
-      "Speichern im gemeinsamen Leaderboard fehlgeschlagen. Bitte Supabase-Setup pruefen."
-    );
+    throw new Error("Speichern im gemeinsamen Leaderboard fehlgeschlagen. Bitte Supabase-Setup pruefen.");
   }
 }
 
@@ -398,13 +472,21 @@ function mapSupabaseRowToEntry(row) {
     oldTariffType: row.old_tariff_type || "fixed",
     oldWorkPriceCents: Number(row.old_work_price_cents),
     oldMarketPriceCents: row.old_market_price_cents === null ? null : Number(row.old_market_price_cents),
+    oldAverageMarketPriceCents:
+      row.old_average_market_price_cents === null ? null : Number(row.old_average_market_price_cents),
     oldMarkupCents: row.old_markup_cents === null ? 0 : Number(row.old_markup_cents),
+    oldPriceSource: row.old_price_source || "fixed",
+    oldHourlyPricesText: row.old_hourly_prices_text || "",
     oldBasePriceEuro: Number(row.old_base_price_euro),
     newTariffName: row.new_tariff_name,
     newTariffType: row.new_tariff_type || "fixed",
     newWorkPriceCents: Number(row.new_work_price_cents),
     newMarketPriceCents: row.new_market_price_cents === null ? null : Number(row.new_market_price_cents),
+    newAverageMarketPriceCents:
+      row.new_average_market_price_cents === null ? null : Number(row.new_average_market_price_cents),
     newMarkupCents: row.new_markup_cents === null ? 0 : Number(row.new_markup_cents),
+    newPriceSource: row.new_price_source || "fixed",
+    newHourlyPricesText: row.new_hourly_prices_text || "",
     newBasePriceEuro: Number(row.new_base_price_euro),
     oldAnnualCost: Number(row.old_annual_cost),
     newAnnualCost: Number(row.new_annual_cost),
@@ -436,8 +518,10 @@ function renderEntries() {
       tariffType: entry.oldTariffType,
       workPriceCents: entry.oldWorkPriceCents,
       marketPriceCents: entry.oldMarketPriceCents,
+      averageMarketPriceCents: entry.oldAverageMarketPriceCents,
       markupCents: entry.oldMarkupCents,
       basePriceEuro: entry.oldBasePriceEuro,
+      priceSource: entry.oldPriceSource,
     });
 
     fillTariffCell(row.querySelector(".new-cell"), {
@@ -445,8 +529,10 @@ function renderEntries() {
       tariffType: entry.newTariffType,
       workPriceCents: entry.newWorkPriceCents,
       marketPriceCents: entry.newMarketPriceCents,
+      averageMarketPriceCents: entry.newAverageMarketPriceCents,
       markupCents: entry.newMarkupCents,
       basePriceEuro: entry.newBasePriceEuro,
+      priceSource: entry.newPriceSource,
     });
 
     const actionsCell = row.querySelector(".actions-cell");
@@ -475,22 +561,34 @@ function renderEntries() {
 }
 
 function fillTariffCell(cell, tariff) {
-  const dynamicDetails =
-    tariff.tariffType === "dynamic"
-      ? `
-        <span>${formatNumber(tariff.marketPriceCents)} ct/kWh Boersenpreis</span><br />
-        <span>${formatNumber(tariff.markupCents)} ct/kWh Aufschlag</span><br />
-        <span>${formatNumber(tariff.workPriceCents)} ct/kWh geschaetzt effektiv</span><br />
-        <span class="tariff-badge estimate">Schaetzung</span>
-      `
-      : `
-        <span>${formatNumber(tariff.workPriceCents)} ct/kWh</span><br />
-        <span class="tariff-badge">Festpreis</span>
-      `;
+  let details = `
+    <span>${formatNumber(tariff.workPriceCents)} ct/kWh</span><br />
+    <span class="tariff-badge">Festpreis</span>
+  `;
+
+  if (tariff.tariffType === "dynamic") {
+    const sourceLabel =
+      tariff.priceSource === "slp_hourly"
+        ? "24h SLP-gewichtet"
+        : "Durchschnitt als Fallback";
+
+    const averageLine =
+      tariff.averageMarketPriceCents !== null
+        ? `<span>${formatNumber(tariff.averageMarketPriceCents)} ct/kWh Tagesmittel</span><br />`
+        : "";
+
+    details = `
+      <span>${formatNumber(tariff.marketPriceCents)} ct/kWh gewichteter Marktpreis</span><br />
+      ${averageLine}
+      <span>${formatNumber(tariff.markupCents)} ct/kWh Aufschlag</span><br />
+      <span>${formatNumber(tariff.workPriceCents)} ct/kWh effektiv</span><br />
+      <span class="tariff-badge estimate">${sourceLabel}</span>
+    `;
+  }
 
   cell.innerHTML = `
     <strong>${escapeHtml(tariff.tariffName)}</strong>
-    ${dynamicDetails}
+    ${details}
     <br />
     <span>${formatEuro(tariff.basePriceEuro)} Grundpreis</span>
   `;
@@ -530,16 +628,20 @@ function updateTariffInputs(prefix) {
   const tariffType = document.getElementById(`${prefix}-tariff-type`).value;
   const label = document.querySelector(`[data-role="price-label"][data-tariff="${prefix}"] span`);
   const extraFields = document.getElementById(`${prefix}-dynamic-fields`);
+  const hourlyPricesWrap = document.getElementById(`${prefix}-hourly-prices-wrap`);
   const markupInput = document.getElementById(`${prefix}-markup`);
+  const hourlyPricesInput = document.getElementById(`${prefix}-hourly-prices`);
   const workPriceInput = document.getElementById(`${prefix}-work-price`);
 
   if (tariffType === "dynamic") {
     label.textContent = prefix === "old"
-      ? "Alter Boersenpreis-Durchschnitt (ct/kWh)"
-      : "Neuer Boersenpreis-Durchschnitt (ct/kWh)";
+      ? "Alter durchschnittlicher Boersenpreis (Fallback, ct/kWh)"
+      : "Neuer durchschnittlicher Boersenpreis (Fallback, ct/kWh)";
     workPriceInput.placeholder = "8.50";
     markupInput.required = true;
     extraFields.classList.remove("hidden");
+    hourlyPricesWrap.classList.remove("hidden");
+    hourlyPricesInput.required = false;
     return;
   }
 
@@ -549,7 +651,10 @@ function updateTariffInputs(prefix) {
   workPriceInput.placeholder = prefix === "old" ? "40.50" : "31.20";
   markupInput.required = false;
   markupInput.value = "";
+  hourlyPricesInput.required = false;
+  hourlyPricesInput.value = "";
   extraFields.classList.add("hidden");
+  hourlyPricesWrap.classList.add("hidden");
 }
 
 function updateAdminUi() {

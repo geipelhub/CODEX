@@ -7,13 +7,19 @@ create table if not exists public.leaderboard_entries (
   old_tariff_type text not null default 'fixed' check (old_tariff_type in ('fixed', 'dynamic')),
   old_work_price_cents numeric not null check (old_work_price_cents >= 0),
   old_market_price_cents numeric,
+  old_average_market_price_cents numeric,
   old_markup_cents numeric not null default 0 check (old_markup_cents >= 0),
+  old_price_source text not null default 'fixed',
+  old_hourly_prices_text text,
   old_base_price_euro numeric not null check (old_base_price_euro >= 0),
   new_tariff_name text not null check (char_length(trim(new_tariff_name)) > 0),
   new_tariff_type text not null default 'fixed' check (new_tariff_type in ('fixed', 'dynamic')),
   new_work_price_cents numeric not null check (new_work_price_cents >= 0),
   new_market_price_cents numeric,
+  new_average_market_price_cents numeric,
   new_markup_cents numeric not null default 0 check (new_markup_cents >= 0),
+  new_price_source text not null default 'fixed',
+  new_hourly_prices_text text,
   new_base_price_euro numeric not null check (new_base_price_euro >= 0),
   old_annual_cost numeric not null,
   new_annual_cost numeric not null,
@@ -24,10 +30,16 @@ create table if not exists public.leaderboard_entries (
 
 alter table public.leaderboard_entries add column if not exists old_tariff_type text not null default 'fixed';
 alter table public.leaderboard_entries add column if not exists old_market_price_cents numeric;
+alter table public.leaderboard_entries add column if not exists old_average_market_price_cents numeric;
 alter table public.leaderboard_entries add column if not exists old_markup_cents numeric not null default 0;
+alter table public.leaderboard_entries add column if not exists old_price_source text not null default 'fixed';
+alter table public.leaderboard_entries add column if not exists old_hourly_prices_text text;
 alter table public.leaderboard_entries add column if not exists new_tariff_type text not null default 'fixed';
 alter table public.leaderboard_entries add column if not exists new_market_price_cents numeric;
+alter table public.leaderboard_entries add column if not exists new_average_market_price_cents numeric;
 alter table public.leaderboard_entries add column if not exists new_markup_cents numeric not null default 0;
+alter table public.leaderboard_entries add column if not exists new_price_source text not null default 'fixed';
+alter table public.leaderboard_entries add column if not exists new_hourly_prices_text text;
 alter table public.leaderboard_entries add column if not exists estimated boolean not null default false;
 
 alter table public.leaderboard_entries enable row level security;
