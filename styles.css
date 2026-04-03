@@ -286,6 +286,11 @@ button[type="submit"] {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+  align-items: end;
+}
+
+.admin-password-field {
+  min-width: 220px;
 }
 
 .leaderboard-table-wrap {

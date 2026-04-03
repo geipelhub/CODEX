@@ -24,8 +24,8 @@ Fuer dein Event solltest du Supabase verwenden, damit alle dieselbe Liste sehen.
 
 In Supabase SQL Editor kannst du direkt [supabase-setup.sql](C:\Users\Admin\OneDrive\Desktop\CODEX\supabase-setup.sql) verwenden.
 
-Der Inhalt legt Tabelle, RLS-Policies und Realtime-Publication an.
-Wenn du die App schon einmal eingerichtet hattest, fuehre die SQL-Datei bitte jetzt noch einmal aus, damit die neuen Spalten fuer dynamische Tarife und die Admin-Delete-Policy hinzugefuegt werden.
+Der Inhalt legt Tabelle, RLS-Policies, Admin-RPC-Funktionen und Realtime-Publication an.
+Wenn du die App schon einmal eingerichtet hattest, fuehre die SQL-Datei bitte jetzt noch einmal aus, damit die neuen Spalten fuer dynamische Tarife und die Passwort-Admin-Logik hinzugefuegt werden.
 
 ### 2. Konfiguration hinterlegen
 
@@ -46,13 +46,15 @@ window.APP_CONFIG = {
 
 Du kannst die Seite danach sehr leicht auf GitHub Pages oder Netlify hosten.
 
-## Admin-Login
+## Admin-Modus
 
-Die App unterstuetzt einen Admin-Login per Supabase E-Mail-Link fuer `jaspergeipel@gmail.com`.
+Die App unterstuetzt einen Admin-Modus per lokalem Passwortfeld.
 
-Falls der Login-Link nicht sauber zur Seite zurueckkommt, setze in Supabase unter Authentication URL Configuration als erlaubte Redirect-URL:
+Das Startpasswort aus [supabase-setup.sql](C:\Users\Admin\OneDrive\Desktop\CODEX\supabase-setup.sql) ist:
 
-- `https://geipelhub.github.io/CODEX/`
+- `Wechselcafe-Admin-2026`
+
+Das Passwort wird in der Website eingegeben und ueber sichere Supabase-RPC-Funktionen geprueft. Danach koennen Eintraege einzeln oder komplett geloescht werden.
 
 Nach jeder Aenderung:
 

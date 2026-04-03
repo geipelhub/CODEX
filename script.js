@@ -1,5 +1,6 @@
 const ANNUAL_CONSUMPTION_KWH = 3500;
 const STORAGE_KEY = "stromspar-leaderboard";
+const ADMIN_PASSWORD_STORAGE_KEY = "leaderboard-admin-password";
 
 const form = document.getElementById("savings-form");
 const leaderboardBody = document.getElementById("leaderboard-body");
@@ -10,16 +11,16 @@ const resetBoardButton = document.getElementById("reset-board");
 const formMessage = document.getElementById("form-message");
 const syncModeBadge = document.getElementById("sync-mode-badge");
 const adminStatus = document.getElementById("admin-status");
+const adminPasswordInput = document.getElementById("admin-password");
 const adminLoginButton = document.getElementById("admin-login-button");
 const adminLogoutButton = document.getElementById("admin-logout-button");
 const adminClearButton = document.getElementById("admin-clear-button");
 const actionsHead = document.getElementById("actions-head");
 
 const supabaseClient = createSupabaseClient();
-const appConfig = window.APP_CONFIG || {};
-const adminEmail = appConfig.adminEmail || "";
 let entries = [];
 let isAdmin = false;
+let adminPassword = sessionStorage.getItem(ADMIN_PASSWORD_STORAGE_KEY) || "";
 
 initializeApp();
 
@@ -63,26 +64,23 @@ form.addEventListener("submit", async (event) => {
     }
 
     form.reset();
+    updateTariffInputs("old");
+    updateTariffInputs("new");
     document.getElementById("name").focus();
   } catch (error) {
     showMessage(error.message || "Der Eintrag konnte nicht gespeichert werden.", "error");
   }
 });
 
-resetBoardButton.addEventListener("click", async () => {
-  const confirmed = window.confirm(
-    "Willst du das Leaderboard wirklich leeren?"
-  );
+resetBoardButton.addEventListener("click", () => {
+  const confirmed = window.confirm("Willst du das Leaderboard wirklich leeren?");
 
   if (!confirmed) {
     return;
   }
 
   if (supabaseClient) {
-    showMessage(
-      "Im gemeinsamen Modus braucht das Leeren Admin-Rechte.",
-      "error"
-    );
+    showMessage("Im gemeinsamen Modus braucht das Leeren Admin-Rechte.", "error");
     return;
   }
 
@@ -93,33 +91,44 @@ resetBoardButton.addEventListener("click", async () => {
 });
 
 adminLoginButton.addEventListener("click", async () => {
-  if (!supabaseClient || !adminEmail) {
-    showMessage("Admin-Login ist nur mit Supabase und hinterlegter Admin-E-Mail verfuegbar.", "error");
+  if (!supabaseClient) {
+    showMessage("Admin-Entsperren ist nur im Live-Modus verfuegbar.", "error");
     return;
   }
 
-  const { error } = await supabaseClient.auth.signInWithOtp({
-    email: adminEmail,
-    options: {
-      emailRedirectTo: window.location.href,
-    },
+  const attemptedPassword = adminPasswordInput.value.trim();
+
+  if (!attemptedPassword) {
+    showMessage("Bitte Admin-Passwort eingeben.", "error");
+    return;
+  }
+
+  const { data, error } = await supabaseClient.rpc("verify_leaderboard_admin_password", {
+    admin_password_input: attemptedPassword,
   });
 
-  if (error) {
-    showMessage(`Admin-Login konnte nicht gestartet werden: ${error.message}`, "error");
+  if (error || !data) {
+    showMessage("Admin-Passwort ist ungueltig.", "error");
     return;
   }
 
-  showMessage(`Admin-Login-Link wurde an ${adminEmail} geschickt.`, "success");
+  adminPassword = attemptedPassword;
+  isAdmin = true;
+  sessionStorage.setItem(ADMIN_PASSWORD_STORAGE_KEY, adminPassword);
+  adminPasswordInput.value = "";
+  updateAdminUi();
+  renderEntries();
+  showMessage("Admin-Modus entsperrt.", "success");
 });
 
-adminLogoutButton.addEventListener("click", async () => {
-  if (!supabaseClient) {
-    return;
-  }
-
-  await supabaseClient.auth.signOut();
-  showMessage("Admin wurde abgemeldet.", "success");
+adminLogoutButton.addEventListener("click", () => {
+  adminPassword = "";
+  isAdmin = false;
+  adminPasswordInput.value = "";
+  sessionStorage.removeItem(ADMIN_PASSWORD_STORAGE_KEY);
+  updateAdminUi();
+  renderEntries();
+  showMessage("Admin-Modus gesperrt.", "success");
 });
 
 adminClearButton.addEventListener("click", async () => {
@@ -272,7 +281,7 @@ function loadEntries() {
 async function initializeApp() {
   updateTariffInputs("old");
   updateTariffInputs("new");
-  await initializeAdminSession();
+  initializeAdminSession();
   await refreshEntries();
 
   if (supabaseClient) {
@@ -280,22 +289,9 @@ async function initializeApp() {
   }
 }
 
-async function initializeAdminSession() {
+function initializeAdminSession() {
+  isAdmin = Boolean(adminPassword);
   updateAdminUi();
-
-  if (!supabaseClient) {
-    return;
-  }
-
-  const {
-    data: { session },
-  } = await supabaseClient.auth.getSession();
-
-  setAdminState(session);
-
-  supabaseClient.auth.onAuthStateChange((_event, sessionSnapshot) => {
-    setAdminState(sessionSnapshot);
-  });
 }
 
 async function refreshEntries() {
@@ -361,24 +357,23 @@ async function saveEntryToSupabase(entry) {
 }
 
 async function deleteEntryFromSupabase(id) {
-  const { error } = await supabaseClient
-    .from("leaderboard_entries")
-    .delete()
-    .eq("id", id);
+  const { error } = await supabaseClient.rpc("delete_leaderboard_entry_with_password", {
+    entry_id_input: id,
+    admin_password_input: adminPassword,
+  });
 
   if (error) {
-    throw new Error("Eintrag konnte nicht geloescht werden. Admin-Login pruefen.");
+    throw new Error("Eintrag konnte nicht geloescht werden. Admin-Passwort pruefen.");
   }
 }
 
 async function deleteAllEntriesFromSupabase() {
-  const { error } = await supabaseClient
-    .from("leaderboard_entries")
-    .delete()
-    .not("id", "is", null);
+  const { error } = await supabaseClient.rpc("clear_leaderboard_with_password", {
+    admin_password_input: adminPassword,
+  });
 
   if (error) {
-    throw new Error("Leaderboard konnte nicht geleert werden. Admin-Login pruefen.");
+    throw new Error("Leaderboard konnte nicht geleert werden. Admin-Passwort pruefen.");
   }
 }
 
@@ -557,16 +552,10 @@ function updateTariffInputs(prefix) {
   extraFields.classList.add("hidden");
 }
 
-function setAdminState(session) {
-  const sessionEmail = session?.user?.email || "";
-  isAdmin = Boolean(sessionEmail && adminEmail && sessionEmail === adminEmail);
-  updateAdminUi(sessionEmail);
-  renderEntries();
-}
-
-function updateAdminUi(sessionEmail = "") {
+function updateAdminUi() {
   if (!supabaseClient) {
     adminStatus.textContent = "Admin nur im Live-Modus";
+    adminPasswordInput.hidden = true;
     adminLoginButton.hidden = true;
     adminLogoutButton.hidden = true;
     adminClearButton.hidden = true;
@@ -575,7 +564,8 @@ function updateAdminUi(sessionEmail = "") {
   }
 
   if (isAdmin) {
-    adminStatus.textContent = `Angemeldet als ${sessionEmail}`;
+    adminStatus.textContent = "Admin-Modus aktiv";
+    adminPasswordInput.hidden = true;
     adminLoginButton.hidden = true;
     adminLogoutButton.hidden = false;
     adminClearButton.hidden = false;
@@ -583,9 +573,8 @@ function updateAdminUi(sessionEmail = "") {
     return;
   }
 
-  adminStatus.textContent = adminEmail
-    ? `Nicht angemeldet. Admin: ${adminEmail}`
-    : "Nicht angemeldet";
+  adminStatus.textContent = "Nicht angemeldet";
+  adminPasswordInput.hidden = false;
   adminLoginButton.hidden = false;
   adminLogoutButton.hidden = true;
   adminClearButton.hidden = true;

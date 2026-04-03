@@ -218,11 +218,20 @@
               </p>
             </div>
             <div class="admin-actions">
+              <label class="admin-password-field">
+                <span>Admin-Passwort</span>
+                <input
+                  id="admin-password"
+                  type="password"
+                  placeholder="Passwort eingeben"
+                  autocomplete="current-password"
+                />
+              </label>
               <button type="button" id="admin-login-button" class="ghost-button">
-                Admin-Login per E-Mail
+                Admin entsperren
               </button>
               <button type="button" id="admin-logout-button" class="ghost-button" hidden>
-                Admin-Logout
+                Sperren
               </button>
               <button type="button" id="admin-clear-button" class="ghost-button danger-button" hidden>
                 Alle Eintraege loeschen
